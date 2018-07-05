@@ -1214,17 +1214,21 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
             s->fat_type = 16;
         }
         s->offset_to_bootsector = 0x3f;
-        cyls = s->fat_type == 12 ? 64 : 1024;
+        cyls = s->fat_type == 12 ? 64 : 65536;
         heads = 16;
-        secs = 63;
+        secs = 255;
     }
 
     switch (s->fat_type) {
     case 32:
         warn_report("FAT32 has not been tested. You are welcome to do so!");
+        s->sectors_per_cluster=0x80;
         break;
     case 16:
+        s->sectors_per_cluster=0x80;
+        break;
     case 12:
+        s->sectors_per_cluster=0x10;
         break;
     default:
         error_setg(errp, "Valid FAT types are only 12, 16 and 32");
@@ -1236,7 +1240,6 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
     s->bs = bs;
 
     /* LATER TODO: if FAT32, adjust */
-    s->sectors_per_cluster=0x10;
 
     s->current_cluster=0xffffffff;
 
@@ -1440,7 +1443,7 @@ read_cluster_directory:
 static void print_direntry(const direntry_t* direntry)
 {
     int j = 0;
-    char buffer[1024];
+    char buffer[65536];
 
     fprintf(stderr, "direntry %p: ", direntry);
     if(!direntry)
