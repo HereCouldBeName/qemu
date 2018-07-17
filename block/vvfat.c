@@ -77,6 +77,59 @@ static void checkpoint(void);
 #define DIR_KANJI_FAKE 0x05
 #define DIR_FREE 0x00
 
+//добавил
+typedef struct queue
+{
+    struct queue *next;
+    const char* value;
+}Queue;
+
+static void init_queue(Queue **head, const char* c)
+{
+    Queue *tmp = (Queue*) malloc(sizeof(Queue));
+    tmp->next=NULL;
+    tmp->value=c;
+    (*head)=tmp;
+}
+
+static Queue* getLast(Queue *head) {
+    if (head == NULL) {
+        return NULL;
+    }
+    while (head->next) {
+        head = head->next;
+    }
+    return head;
+}
+
+static bool empty(Queue *head)
+{
+    if (head == NULL)
+       return true;
+    return false;
+}
+
+static void push_back(Queue *head, char* c)
+{
+    Queue *last=getLast(head);
+    Queue *tmp = (Queue*) malloc(sizeof(Queue));
+    tmp->next=NULL;
+    tmp->value=c;
+    last->next=tmp;
+}
+
+static const char* front(Queue *head)
+{
+    return(head->value);
+}
+static void pop(Queue **head)
+{
+    Queue *tmp = (*head);
+    (*head)=(*head)->next;
+    free(tmp);
+}
+
+//
 /* dynamic array functions */
 typedef struct array_t {
     char* pointer;
@@ -333,7 +386,7 @@ static void print_mapping(const struct mapping_t* mapping);
 typedef struct BDRVVVFATState {
     CoMutex lock;
     BlockDriverState* bs; /* pointer to parent */
-    unsigned char first_sectors[0x40*0x200];
+    unsigned char first_sectors[0x40*0x200]; // 54 * 512
 
     int fat_type; /* 16 or 32 */
     array_t fat,directory,mapping;
@@ -788,11 +841,11 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
     }
 
     /* actually read the directory, and allocate the mappings */
-    while((entry=readdir(dir))) {
+        while((entry=readdir(dir))) {
         unsigned int length=strlen(dirname)+2+strlen(entry->d_name);
         char* buffer;
         direntry_t* direntry;
-        struct stat st;
+        struct stat st; //point 1
         int is_dot=!strcmp(entry->d_name,".");
         int is_dotdot=!strcmp(entry->d_name,"..");
 
@@ -868,7 +921,6 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
         }
     }
     closedir(dir);
-
     /* fill with zeroes up to the end of the cluster */
     while(s->directory.next%(0x10*s->sectors_per_cluster)) {
         direntry_t* direntry=array_get_next(&(s->directory));
@@ -893,9 +945,8 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
     mapping->end = first_cluster;
 
     direntry = array_get(&(s->directory), mapping->dir_index);
-    set_begin_of_direntry(direntry, mapping->begin);
-
-    return 0;
+    set_begin_of_direntry(direntry, mapping->begin);   
+ return 0;
 }
 
 static inline uint32_t sector2cluster(BDRVVVFATState* s,off_t sector_num)
@@ -930,6 +981,7 @@ static int init_directories(BDRVVVFATState* s,
      * fat_type = 12, 16 or 32.
      */
     i = 1+s->sectors_per_cluster*0x200*8/s->fat_type;
+    
     s->sectors_per_fat=(s->sector_count+i)/i; /* round up */
 
     s->offset_to_fat = s->offset_to_bootsector + 1;
@@ -952,6 +1004,7 @@ static int init_directories(BDRVVVFATState* s,
     s->root_entries = 0x02 * 0x10 * s->sectors_per_cluster;
     s->cluster_count=sector2cluster(s, s->sector_count);
 
+    
     mapping = array_get_next(&(s->mapping));
     mapping->begin = 0;
     mapping->dir_index = 0;
@@ -964,8 +1017,8 @@ static int init_directories(BDRVVVFATState* s,
     mapping->mode = MODE_DIRECTORY;
     mapping->read_only = 0;
     s->path = mapping->path;
-
-    for (i = 0, cluster = 0; i < s->mapping.next; i++) {
+    for (i = 0, cluster = 0; i < s->mapping.next; i++) { //point 2
+        //fprintf(stderr, "first mapping.next is %i \n",  s->mapping.next);
         /* MS-DOS expects the FAT to be 0 for the root directory
          * (except for the media byte). */
         /* LATER TODO: still true for FAT32? */
@@ -974,7 +1027,7 @@ static int init_directories(BDRVVVFATState* s,
 
         if (mapping->mode & MODE_DIRECTORY) {
             mapping->begin = cluster;
-            if(read_directory(s, i)) {
+            if(read_directory(s, i)) {     
                 error_setg(errp, "Could not read directory %s",
                            mapping->path);
                 return -1;
@@ -995,12 +1048,12 @@ static int init_directories(BDRVVVFATState* s,
                 fix_fat = 0;
             }
         }
+        
 
         assert(mapping->begin < mapping->end);
 
         /* next free cluster */
         cluster = mapping->end;
-
         if(cluster > s->cluster_count) {
             error_setg(errp,
                        "Directory does not fit in FAT%d (capacity %.2f MB)",
@@ -1015,8 +1068,7 @@ static int init_directories(BDRVVVFATState* s,
                 fat_set(s, j, j+1);
             fat_set(s, mapping->end - 1, s->max_fat_value);
         }
-    }
-
+    } 
     mapping = array_get(&(s->mapping), 0);
     s->last_cluster_of_root_directory = mapping->end;
 
@@ -1058,6 +1110,8 @@ static int init_directories(BDRVVVFATState* s,
     memcpy(bootsector->u.fat16.fat_type,
            s->fat_type == 12 ? "FAT12   " : "FAT16   ", 8);
     bootsector->magic[0]=0x55; bootsector->magic[1]=0xaa;
+
+    
 
     return 0;
 }
@@ -1159,7 +1213,6 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
     QemuOpts *opts;
     Error *local_err = NULL;
     int ret;
-
 #ifdef DEBUG
     vvv = s;
 #endif
@@ -1179,6 +1232,43 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
         goto fail;
     }
 
+    //добавил
+    long int allsum=0; 
+    Queue *head = NULL;
+    init_queue(&head, dirname);
+    while(!empty(head))
+    {
+       const char* DIRname = front(head);
+       DIR* dir=opendir(DIRname);
+       struct dirent* entry;
+       fprintf(stderr, "dir is %s  \n", DIRname);
+       while((entry=readdir(dir))) {
+            unsigned int length=strlen(DIRname)+2+strlen(entry->d_name);
+            char* buffer;
+            struct stat st; //редактировал
+            int is_dot=!strcmp(entry->d_name,".");
+            int is_dotdot=!strcmp(entry->d_name,"..");
+            buffer = g_malloc(length);
+            snprintf(buffer,length,"%s/%s",DIRname,entry->d_name);
+            //fprintf(stderr, "buffer is %s  \n", buffer);
+            if(stat(buffer,&st)<0) {
+                g_free(buffer);
+                continue;
+            }
+            //fprintf(stderr, "SIZE NOW is %li and dir is %s and mod is %i \n", st.st_size, entry->d_name, st.st_mode);
+            if(!is_dot && !is_dotdot && S_ISDIR(st.st_mode)) {
+                push_back(head, buffer);
+            } 
+            else {
+                g_free(buffer);
+            }
+            allsum+=cpu_to_le32(S_ISDIR(st.st_mode)?0:st.st_size);
+        }
+        pop(&head);
+        closedir(dir);
+    }
+    //fprintf(stderr, "size is %li \n", allsum);
+    //
     s->fat_type = qemu_opt_get_number(opts, "fat-type", 0);
     floppy = qemu_opt_get_bool(opts, "floppy", false);
 
@@ -1195,7 +1285,6 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
     } else {
         memcpy(s->volume_label, "QEMU VVFAT", 10);
     }
-
     if (floppy) {
         /* 1.44MB or 2.88MB floppy.  2.88MB can be FAT12 (default) or FAT16. */
         if (!s->fat_type) {
@@ -1208,7 +1297,7 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
         }
         cyls = 80;
         heads = 2;
-    } else {
+    } else if(allsum<528482304){
         /* 32MB or 504MB disk*/
         if (!s->fat_type) {
             s->fat_type = 16;
@@ -1217,14 +1306,38 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
         cyls = s->fat_type == 12 ? 64 : 1024;
         heads = 16;
         secs = 63;
+    } else if(allsum<8455716864){
+        /* 504MB or 8064MB disk*/
+        if (!s->fat_type) {
+            s->fat_type = 16;
+        }
+        s->offset_to_bootsector = 0x3f;
+        cyls = s->fat_type == 12 ? 64 : 1024;
+        heads = 256;
+        secs = 63;
+    }
+    else
+    {
+        /* 32MB or 504MB disk*/
+        if (!s->fat_type) {
+            s->fat_type = 16;
+        }
+        s->offset_to_bootsector = 0x3f;
+        cyls = s->fat_type == 12 ? 64 : 65536;
+        heads = 16;
+        secs = 255;
     }
 
     switch (s->fat_type) {
     case 32:
         warn_report("FAT32 has not been tested. You are welcome to do so!");
+        s->sectors_per_cluster=0x80;
         break;
     case 16:
+        s->sectors_per_cluster=0x80;
+        break;
     case 12:
+        s->sectors_per_cluster=0x10;
         break;
     default:
         error_setg(errp, "Valid FAT types are only 12, 16 and 32");
@@ -1236,7 +1349,6 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
     s->bs = bs;
 
     /* LATER TODO: if FAT32, adjust */
-    s->sectors_per_cluster=0x10;
 
     s->current_cluster=0xffffffff;
 
@@ -1440,7 +1552,7 @@ read_cluster_directory:
 static void print_direntry(const direntry_t* direntry)
 {
     int j = 0;
-    char buffer[1024];
+    char buffer[65536];
 
     fprintf(stderr, "direntry %p: ", direntry);
     if(!direntry)
