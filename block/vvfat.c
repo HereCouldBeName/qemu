@@ -85,16 +85,30 @@ struct fat
     int secs;
     long int max_value;
 }choice[2];
-static uint32_t get_sector_count(uint32_t offset_to_bootsector,
-                            int cyls, int heads, int secs)
+
+static void chek_size(uint32_t offset_to_bootsector, int *cyls, int *heads, int *secs,
+                      uint8_t sectors_per_cluster, int fat_type, long int sum)
 {
-    return cyls * heads * secs - offset_to_bootsector;
-}
-static uint16_t get_sectors_per_fat(uint8_t sectors_per_cluster,
-                               uint32_t sector_count, int fat_type)
-{
-    int i = 1 + sectors_per_cluster*0x200*8/fat_type;
-    return (sector_count+i)/i;
+    long int size_disk = 528482304;
+    *cyls = fat_type == 12 ? 64 : 1024;
+    *heads = 16;
+    *secs = 63;
+    for (int j=0 ; j<2 ; j++)
+    {
+        uint32_t sector_count = (*cyls) * (*heads) * (*secs) - offset_to_bootsector;
+        int i = 1 + sectors_per_cluster*0x200*8/fat_type;
+        uint16_t sectors_per_fat = (sector_count+i)/i;
+        if((sum+cpu_to_le16(sectors_per_fat*512*2))<size_disk)
+            return;
+        *cyls = fat_type == 12 ? 64 : 1024;
+        *heads = 256;
+        *secs = 63;
+        size_disk = 8455716864;
+    }
+    *cyls = fat_type == 12 ? 64 : 65536;
+    *heads = 16;
+    *secs = 255;
+    return;
 }
 static void find_size(long int *sum, const char* dirname, unsigned int *cluster)
 {
@@ -1291,41 +1305,11 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
     } 
     else
     {
-        bool isOkey=false;
         if (!s->fat_type) {
             s->fat_type = 16;
         }
-        choice[0].cyls = s->fat_type == 12 ? 64 : 1024;
-        choice[0].heads = 16;
-        choice[0].secs = 63;
-        choice[0].max_value = 528482304;
-        choice[1].cyls = s->fat_type == 12 ? 64 : 1024;
-        choice[1].heads = 256;
-        choice[1].secs = 63;
-        choice[1].max_value = 8455716864;
-        for(int i=0; i<2; i++)
-        {
-            uint32_t sector_count = get_sector_count(s->offset_to_bootsector,
-                            choice[i].cyls, choice[i].heads, choice[i].secs);
-            
-            uint16_t sectors_per_fat = get_sectors_per_fat(s->sectors_per_cluster,
-                               sector_count, s->fat_type);
-
-            if((sum+cpu_to_le16(sectors_per_fat*512*2))<choice[i].max_value)
-            {
-                secs = choice[i].secs;
-                heads = choice[i].heads;
-                cyls = choice[i].cyls;
-                isOkey=true;
-                break;
-            }
-        }
-        if(!isOkey)
-        {
-            cyls = s->fat_type == 12 ? 64 : 65536;
-            heads = 16;
-            secs = 255;
-        }
+        chek_size(s->offset_to_bootsector, &cyls, &heads, &secs, s->sectors_per_cluster,
+                  s->fat_type, sum);
     }
     switch (s->fat_type) {
     case 32:
