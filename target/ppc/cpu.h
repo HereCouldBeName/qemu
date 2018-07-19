@@ -196,7 +196,6 @@ enum {
     /* QEMU exceptions: special cases we want to stop translation            */
     POWERPC_EXCP_SYNC         = 0x202, /* context synchronizing instruction  */
     POWERPC_EXCP_SYSCALL_USER = 0x203, /* System call in user mode only      */
-    POWERPC_EXCP_STCX         = 0x204 /* Conditional stores in user mode     */
 };
 
 /* Exceptions error codes                                                    */
@@ -994,10 +993,6 @@ struct CPUPPCState {
     /* Reservation value */
     target_ulong reserve_val;
     target_ulong reserve_val2;
-    /* Reservation store address */
-    target_ulong reserve_ea;
-    /* Reserved store source register and size */
-    target_ulong reserve_info;
 
     /* Those ones are used in supervisor mode only */
     /* machine state register */
@@ -1014,6 +1009,9 @@ struct CPUPPCState {
 
     /* Next instruction pointer */
     target_ulong nip;
+
+    /* High part of 128-bit helper return.  */
+    uint64_t retxh;
 
     int access_type; /* when a memory exception occurs, the access
                         type is stored here */
@@ -1369,7 +1367,11 @@ static inline int cpu_mmu_index (CPUPPCState *env, bool ifetch)
 #if defined(TARGET_PPC64)
 bool ppc_check_compat(PowerPCCPU *cpu, uint32_t compat_pvr,
                       uint32_t min_compat_pvr, uint32_t max_compat_pvr);
+bool ppc_type_check_compat(const char *cputype, uint32_t compat_pvr,
+                           uint32_t min_compat_pvr, uint32_t max_compat_pvr);
+
 void ppc_set_compat(PowerPCCPU *cpu, uint32_t compat_pvr, Error **errp);
+
 #if !defined(CONFIG_USER_ONLY)
 void ppc_set_compat_all(uint32_t compat_pvr, Error **errp);
 #endif

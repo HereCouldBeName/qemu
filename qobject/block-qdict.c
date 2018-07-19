@@ -97,7 +97,7 @@ static void qdict_flatten_qdict(QDict *qdict, QDict *target, const char *prefix)
     const QDictEntry *entry, *next;
     QDict *dict_val;
     QList *list_val;
-    char *new_key;
+    char *key, *new_key;
 
     entry = qdict_first(qdict);
 
@@ -106,27 +106,38 @@ static void qdict_flatten_qdict(QDict *qdict, QDict *target, const char *prefix)
         value = qdict_entry_value(entry);
         dict_val = qobject_to(QDict, value);
         list_val = qobject_to(QList, value);
-        new_key = NULL;
 
         if (prefix) {
-            new_key = g_strdup_printf("%s.%s", prefix, entry->key);
+            key = new_key = g_strdup_printf("%s.%s", prefix, entry->key);
+        } else {
+            key = entry->key;
+            new_key = NULL;
         }
 
         /*
          * Flatten non-empty QDict and QList recursively into @target,
-         * copy other objects to @target
+         * copy other objects to @target.
+         * On the root level (if @qdict == @target), remove flattened
+         * nested QDicts and QLists from @qdict.
+         *
+         * (Note that we do not need to remove entries from nested
+         * dicts or lists.  Their reference count is decremented on
+         * the root level, so there are no leaks.  In fact, if they
+         * have a reference count greater than one, we are probably
+         * well advised not to modify them altogether.)
          */
         if (dict_val && qdict_size(dict_val)) {
-            qdict_flatten_qdict(dict_val, target,
-                                new_key ? new_key : entry->key);
-            qdict_del(qdict, entry->key);
+            qdict_flatten_qdict(dict_val, target, key);
+            if (target == qdict) {
+                qdict_del(qdict, entry->key);
+            }
         } else if (list_val && !qlist_empty(list_val)) {
-            qdict_flatten_qlist(list_val, target,
-                                new_key ? new_key : entry->key);
-            qdict_del(qdict, entry->key);
+            qdict_flatten_qlist(list_val, target, key);
+            if (target == qdict) {
+                qdict_del(qdict, entry->key);
+            }
         } else if (target != qdict) {
-            qdict_put_obj(target, new_key, qobject_ref(value));
-            qdict_del(qdict, entry->key);
+            qdict_put_obj(target, key, qobject_ref(value));
         }
 
         g_free(new_key);
