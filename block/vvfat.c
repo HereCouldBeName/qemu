@@ -77,6 +77,56 @@ static void checkpoint(void);
 #define DIR_KANJI_FAKE 0x05
 #define DIR_FREE 0x00
 
+//добавил
+static bool chek_size(uint32_t offset_to_bootsector, int cyls, int heads, int secs,
+                      uint8_t sectors_per_cluster, int fat_type, long int sum, long int size_disk)
+{
+    uint32_t sector_count = cyls * heads * secs - offset_to_bootsector;
+    int i = 1 + sectors_per_cluster*0x200*8/fat_type;
+    uint16_t sectors_per_fat = (sector_count+i)/i;
+    printf("stderr, size is %i and all size is %li\n", cpu_to_le16(sectors_per_fat*512*2),sum+cpu_to_le16(sectors_per_fat*512*2) );
+    if((sum+cpu_to_le16(sectors_per_fat*512*2))<size_disk)
+            return true;
+    return false;
+}
+static void find_size(long int *sum, const char* dirname, unsigned int *cluster)
+{
+    //printf(stderr, "sum is %li  \n", *sum);
+    DIR* dir=opendir(dirname);
+    struct dirent* entry;
+    //fprintf(stderr, "dir is %s  \n", dirname);
+    while((entry=readdir(dir))) {
+        unsigned int length=strlen(dirname)+2+strlen(entry->d_name);
+        char* buffer;
+        struct stat st; 
+        int is_dot=!strcmp(entry->d_name,".");
+        int is_dotdot=!strcmp(entry->d_name,"..");
+        buffer = g_malloc(length);
+        snprintf(buffer,length,"%s/%s",dirname,entry->d_name);
+        //fprintf(stderr, "buffer is %s  \n", buffer);
+        if(stat(buffer,&st)<0) {
+            g_free(buffer);
+            continue;
+        }
+        if(!is_dot && !is_dotdot && S_ISDIR(st.st_mode)) {
+            find_size(sum, buffer, cluster);
+        } 
+        else {
+            g_free(buffer);
+        }
+        float tmp = (float)cpu_to_le32(st.st_size)/(float)(*cluster);
+        if(tmp>(int)(tmp))
+        {
+            (*sum)+=((int)tmp+1)*(*cluster);
+        }
+        else
+        {
+            (*sum)+=cpu_to_le32(st.st_size); 
+        }
+    }
+    closedir(dir);
+}
+//
 /* dynamic array functions */
 typedef struct array_t {
     char* pointer;
@@ -333,7 +383,7 @@ static void print_mapping(const struct mapping_t* mapping);
 typedef struct BDRVVVFATState {
     CoMutex lock;
     BlockDriverState* bs; /* pointer to parent */
-    unsigned char first_sectors[0x40*0x200];
+    unsigned char first_sectors[0x40*0x200]; // 54 * 512
 
     int fat_type; /* 16 or 32 */
     array_t fat,directory,mapping;
@@ -788,11 +838,11 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
     }
 
     /* actually read the directory, and allocate the mappings */
-    while((entry=readdir(dir))) {
+        while((entry=readdir(dir))) {
         unsigned int length=strlen(dirname)+2+strlen(entry->d_name);
         char* buffer;
         direntry_t* direntry;
-        struct stat st;
+        struct stat st; //point 1
         int is_dot=!strcmp(entry->d_name,".");
         int is_dotdot=!strcmp(entry->d_name,"..");
 
@@ -868,7 +918,6 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
         }
     }
     closedir(dir);
-
     /* fill with zeroes up to the end of the cluster */
     while(s->directory.next%(0x10*s->sectors_per_cluster)) {
         direntry_t* direntry=array_get_next(&(s->directory));
@@ -893,9 +942,8 @@ static int read_directory(BDRVVVFATState* s, int mapping_index)
     mapping->end = first_cluster;
 
     direntry = array_get(&(s->directory), mapping->dir_index);
-    set_begin_of_direntry(direntry, mapping->begin);
-
-    return 0;
+    set_begin_of_direntry(direntry, mapping->begin);   
+ return 0;
 }
 
 static inline uint32_t sector2cluster(BDRVVVFATState* s,off_t sector_num)
@@ -930,6 +978,7 @@ static int init_directories(BDRVVVFATState* s,
      * fat_type = 12, 16 or 32.
      */
     i = 1+s->sectors_per_cluster*0x200*8/s->fat_type;
+    
     s->sectors_per_fat=(s->sector_count+i)/i; /* round up */
 
     s->offset_to_fat = s->offset_to_bootsector + 1;
@@ -949,9 +998,10 @@ static int init_directories(BDRVVVFATState* s,
     init_fat(s);
 
     /* TODO: if there are more entries, bootsector has to be adjusted! */
-    s->root_entries = 0x02 * 0x10 * s->sectors_per_cluster;
+    //s->root_entries = 0x02 * 0x10 * s->sectors_per_cluster;
     s->cluster_count=sector2cluster(s, s->sector_count);
 
+    
     mapping = array_get_next(&(s->mapping));
     mapping->begin = 0;
     mapping->dir_index = 0;
@@ -964,8 +1014,8 @@ static int init_directories(BDRVVVFATState* s,
     mapping->mode = MODE_DIRECTORY;
     mapping->read_only = 0;
     s->path = mapping->path;
-
-    for (i = 0, cluster = 0; i < s->mapping.next; i++) {
+    for (i = 0, cluster = 0; i < s->mapping.next; i++) { //point 2
+        //fprintf(stderr, "first mapping.next is %i \n",  s->mapping.next);
         /* MS-DOS expects the FAT to be 0 for the root directory
          * (except for the media byte). */
         /* LATER TODO: still true for FAT32? */
@@ -974,7 +1024,7 @@ static int init_directories(BDRVVVFATState* s,
 
         if (mapping->mode & MODE_DIRECTORY) {
             mapping->begin = cluster;
-            if(read_directory(s, i)) {
+            if(read_directory(s, i)) {     
                 error_setg(errp, "Could not read directory %s",
                            mapping->path);
                 return -1;
@@ -995,12 +1045,12 @@ static int init_directories(BDRVVVFATState* s,
                 fix_fat = 0;
             }
         }
+        
 
         assert(mapping->begin < mapping->end);
 
         /* next free cluster */
         cluster = mapping->end;
-
         if(cluster > s->cluster_count) {
             error_setg(errp,
                        "Directory does not fit in FAT%d (capacity %.2f MB)",
@@ -1015,8 +1065,7 @@ static int init_directories(BDRVVVFATState* s,
                 fat_set(s, j, j+1);
             fat_set(s, mapping->end - 1, s->max_fat_value);
         }
-    }
-
+    } 
     mapping = array_get(&(s->mapping), 0);
     s->last_cluster_of_root_directory = mapping->end;
 
@@ -1058,6 +1107,8 @@ static int init_directories(BDRVVVFATState* s,
     memcpy(bootsector->u.fat16.fat_type,
            s->fat_type == 12 ? "FAT12   " : "FAT16   ", 8);
     bootsector->magic[0]=0x55; bootsector->magic[1]=0xaa;
+
+    
 
     return 0;
 }
@@ -1154,12 +1205,12 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
 {
     BDRVVVFATState *s = bs->opaque;
     int cyls, heads, secs;
+    long int size_disk;
     bool floppy;
     const char *dirname, *label;
     QemuOpts *opts;
     Error *local_err = NULL;
     int ret;
-
 #ifdef DEBUG
     vvv = s;
 #endif
@@ -1181,6 +1232,30 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
 
     s->fat_type = qemu_opt_get_number(opts, "fat-type", 0);
     floppy = qemu_opt_get_bool(opts, "floppy", false);
+    unsigned int cluster;
+    long int sum=0;
+    if (floppy) {
+        if (!s->fat_type) {
+            s->sectors_per_cluster = 2;
+        } else {
+            s->sectors_per_cluster = 1;
+        }
+    }
+    else if(s->fat_type == 12)
+    {
+        s->offset_to_bootsector = 0x3f;
+        s->sectors_per_cluster = 0x10;
+    }
+    else
+    {
+        s->offset_to_bootsector = 0x3f;
+        s->sectors_per_cluster = 0x80;
+    }
+
+    cluster = s->sectors_per_cluster*0x200;
+    find_size(&sum,dirname, &cluster);  
+    s->root_entries = 0x02 * 0x10 * s->sectors_per_cluster;
+    sum+=512+s->root_entries*32;//without FAT
 
     memset(s->volume_label, ' ', sizeof(s->volume_label));
     label = qemu_opt_get(opts, "label");
@@ -1196,45 +1271,58 @@ static int vvfat_open(BlockDriverState *bs, QDict *options, int flags,
         memcpy(s->volume_label, "QEMU VVFAT", 10);
     }
 
+
     if (floppy) {
         /* 1.44MB or 2.88MB floppy.  2.88MB can be FAT12 (default) or FAT16. */
         if (!s->fat_type) {
             s->fat_type = 12;
             secs = 36;
-            s->sectors_per_cluster = 2;
         } else {
             secs = s->fat_type == 12 ? 18 : 36;
-            s->sectors_per_cluster = 1;
         }
         cyls = 80;
         heads = 2;
-    } else {
-        /* 32MB or 504MB disk*/
+    } 
+    else
+    {
         if (!s->fat_type) {
             s->fat_type = 16;
         }
-        s->offset_to_bootsector = 0x3f;
-        cyls = s->fat_type == 12 ? 64 : 65536;
+        size_disk = 528482304;
+        cyls = s->fat_type == 12 ? 64 : 1024;
         heads = 16;
-        secs = 255;
-    }
+        secs = 63;
+        if(!chek_size(s->offset_to_bootsector, cyls, heads, secs, s->sectors_per_cluster,
+                  s->fat_type, sum, size_disk))
+        {
+            cyls = s->fat_type == 12 ? 64 : 1024;
+            heads = 256;
+            secs = 63;
+            size_disk = 8455716864;
+            if(!chek_size(s->offset_to_bootsector, cyls, heads, secs, s->sectors_per_cluster,
+                  s->fat_type, sum, size_disk))
+            {
+                cyls = s->fat_type == 12 ? 64 : 65536;
+                heads = 16;
+                secs = 255;
+            }
+        }
 
+    }
     switch (s->fat_type) {
     case 32:
         warn_report("FAT32 has not been tested. You are welcome to do so!");
-        s->sectors_per_cluster=0x80;
         break;
     case 16:
-        s->sectors_per_cluster=0x80;
         break;
     case 12:
-        s->sectors_per_cluster=0x10;
         break;
     default:
         error_setg(errp, "Valid FAT types are only 12, 16 and 32");
         ret = -EINVAL;
         goto fail;
     }
+
 
 
     s->bs = bs;
