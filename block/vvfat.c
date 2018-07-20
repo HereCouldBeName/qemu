@@ -84,7 +84,6 @@ static bool chek_size(uint32_t offset_to_bootsector, int cyls, int heads, int se
     uint32_t sector_count = cyls * heads * secs - offset_to_bootsector;
     int i = 1 + sectors_per_cluster*0x200*8/fat_type;
     uint16_t sectors_per_fat = (sector_count+i)/i;
-    printf("stderr, size is %i and all size is %li\n", cpu_to_le16(sectors_per_fat*512*2),sum+cpu_to_le16(sectors_per_fat*512*2) );
     if((sum+cpu_to_le16(sectors_per_fat*512*2))<size_disk)
             return true;
     return false;
