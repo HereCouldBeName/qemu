@@ -84,7 +84,6 @@ static bool chek_size(uint32_t offset_to_bootsector, int cyls, int heads, int se
     uint32_t sector_count = cyls * heads * secs - offset_to_bootsector;
     int i = 1 + sectors_per_cluster*0x200*8/fat_type;
     uint16_t sectors_per_fat = (sector_count+i)/i;
-    printf("stderr, size is %i and all size is %li\n", cpu_to_le16(sectors_per_fat*512*2),sum+cpu_to_le16(sectors_per_fat*512*2) );
     if((sum+cpu_to_le16(sectors_per_fat*512*2))<size_disk)
             return true;
     return false;
@@ -99,8 +98,6 @@ static void find_size(long int *sum, const char* dirname, unsigned int *cluster)
         unsigned int length=strlen(dirname)+2+strlen(entry->d_name);
         char* buffer;
         struct stat st; 
-        int is_dot=!strcmp(entry->d_name,".");
-        int is_dotdot=!strcmp(entry->d_name,"..");
         buffer = g_malloc(length);
         snprintf(buffer,length,"%s/%s",dirname,entry->d_name);
         //fprintf(stderr, "buffer is %s  \n", buffer);
@@ -108,16 +105,15 @@ static void find_size(long int *sum, const char* dirname, unsigned int *cluster)
             g_free(buffer);
             continue;
         }
-        if(!is_dot && !is_dotdot && S_ISDIR(st.st_mode)) {
+        if(strcmp(entry->d_name,".") && strcmp(entry->d_name,"..") && S_ISDIR(st.st_mode)) {
             find_size(sum, buffer, cluster);
         } 
         else {
             g_free(buffer);
         }
-        float tmp = (float)cpu_to_le32(st.st_size)/(float)(*cluster);
-        if(tmp>(int)(tmp))
+        if(cpu_to_le32(st.st_size)%(*cluster)!=0)
         {
-            (*sum)+=((int)tmp+1)*(*cluster);
+            (*sum)+=(cpu_to_le32(st.st_size)/(*cluster)+1)*(*cluster);
         }
         else
         {
