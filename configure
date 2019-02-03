@@ -7066,7 +7066,7 @@ case "$target_name" in
     target_compiler=$cross_cc_hppa
   ;;
   lm32)
-     r=$cross_cc_lm32
+     target_compiler=$cross_cc_lm32
   ;;
   m68k)
     bflt="yes"
