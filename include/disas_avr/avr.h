@@ -49,22 +49,22 @@
 #define AVR_ISA_M323  (AVR_ISA_M161 | AVR_ISA_BRK)
 #define AVR_ISA_M128  (AVR_ISA_M323 | AVR_ISA_ELPM | AVR_ISA_ELPMX)
 
-#define AVR_ISA_AVR1   AVR_ISA_TINY1
-#define AVR_ISA_AVR2   AVR_ISA_2xxx
-#define AVR_ISA_AVR25  AVR_ISA_TINY2
-#define AVR_ISA_AVR3   AVR_ISA_M603
-#define AVR_ISA_AVR31 	AVR_ISA_M103
-#define AVR_ISA_AVR35 	(AVR_ISA_AVR3 | AVR_ISA_MOVW | \
-                        AVR_ISA_LPMX | AVR_ISA_SPM | AVR_ISA_BRK)
+#define AVR_ISA_AVR1  AVR_ISA_TINY1
+#define AVR_ISA_AVR2  AVR_ISA_2xxx
+#define AVR_ISA_AVR25 AVR_ISA_TINY2
+#define AVR_ISA_AVR3  AVR_ISA_M603
+#define AVR_ISA_AVR31 AVR_ISA_M103
+#define AVR_ISA_AVR35 (AVR_ISA_AVR3 | AVR_ISA_MOVW | \
+                       AVR_ISA_LPMX | AVR_ISA_SPM | AVR_ISA_BRK)
 #define AVR_ISA_AVR3_ALL (AVR_ISA_AVR3 | AVR_ISA_AVR31 | AVR_ISA_AVR35)
-#define AVR_ISA_AVR4   AVR_ISA_PWMx
-#define AVR_ISA_AVR5   AVR_ISA_M323
-#define AVR_ISA_AVR51  AVR_ISA_M128
-#define AVR_ISA_AVR6   (AVR_ISA_1200 | AVR_ISA_LPM | AVR_ISA_LPMX | \
-                        AVR_ISA_SRAM | AVR_ISA_MEGA | AVR_ISA_MUL | \
-                        AVR_ISA_ELPM | AVR_ISA_ELPMX | AVR_ISA_SPM | \
-                        AVR_ISA_SPM | AVR_ISA_BRK | AVR_ISA_EIND | \
-                        AVR_ISA_MOVW)
+#define AVR_ISA_AVR4  AVR_ISA_PWMx
+#define AVR_ISA_AVR5  AVR_ISA_M323
+#define AVR_ISA_AVR51 AVR_ISA_M128
+#define AVR_ISA_AVR6  (AVR_ISA_1200 | AVR_ISA_LPM | AVR_ISA_LPMX | \
+                       AVR_ISA_SRAM | AVR_ISA_MEGA | AVR_ISA_MUL | \
+                       AVR_ISA_ELPM | AVR_ISA_ELPMX | AVR_ISA_SPM | \
+                       AVR_ISA_SPM | AVR_ISA_BRK | AVR_ISA_EIND | \
+                       AVR_ISA_MOVW)
 
 #define REGISTER_P(x) ((x) == 'r'		\
 		       || (x) == 'd'		\
