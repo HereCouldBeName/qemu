@@ -18,4 +18,4 @@
 #  <http://www.gnu.org/licenses/lgpl-2.1.html>
 #
 
-obj-y += sample.o
+obj-y += sample.o ATmega8.o atmega8_soc.o

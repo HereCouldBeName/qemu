@@ -302,6 +302,8 @@ void helper_outb(CPUAVRState *env, uint32_t port, uint32_t data)
          */
         cpu_physical_memory_write(PHYS_BASE_REGS + port + AVR_CPU_IO_REGS_BASE,
                                   &data, 1);
+	//printf("\n need info: %x, PHYS_BASE_REGS: %x,  port: %x, AVR_CPU_IO_REGS_BASE: %x \n", PHYS_BASE_REGS + port + AVR_CPU_IO_REGS_BASE, PHYS_BASE_REGS, port, AVR_CPU_IO_REGS_BASE);
+	
     }
 }
 
