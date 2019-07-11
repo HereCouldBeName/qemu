@@ -493,6 +493,43 @@ static void avr_xmega7_initfn(Object *obj)
     avr_set_feature(env, AVR_FEATURE_RMW);
 }
 
+/*static void avr_atmega8_initfn(Object *obj)
+{
+    AVRCPU *cpu = AVR_CPU(obj);
+    CPUAVRState *env = &cpu->env;
+
+    avr_set_feature(env, AVR_FEATURE_LPM); //supported
+    avr_set_feature(env, AVR_FEATURE_IJMP_ICALL); //supported
+    avr_set_feature(env, AVR_FEATURE_ADIW_SBIW); //supported
+    avr_set_feature(env, AVR_FEATURE_SRAM); // ?
+    avr_set_feature(env, AVR_FEATURE_BREAK); 
+
+    avr_set_feature(env, AVR_FEATURE_3_BYTE_PC);
+    avr_set_feature(env, AVR_FEATURE_2_BYTE_SP);
+    avr_set_feature(env, AVR_FEATURE_ELPMX);
+    avr_set_feature(env, AVR_FEATURE_ELPM);
+    avr_set_feature(env, AVR_FEATURE_JMP_CALL);
+    avr_set_feature(env, AVR_FEATURE_LPMX);
+    avr_set_feature(env, AVR_FEATURE_MOVW);
+    avr_set_feature(env, AVR_FEATURE_MUL);
+    avr_set_feature(env, AVR_FEATURE_RMW);
+
+
+
+    avr_set_feature(env, AVR_FEATURE_LPM);
+    avr_set_feature(env, AVR_FEATURE_IJMP_ICALL);
+    avr_set_feature(env, AVR_FEATURE_ADIW_SBIW);
+    avr_set_feature(env, AVR_FEATURE_SRAM);
+    avr_set_feature(env, AVR_FEATURE_BREAK);
+
+    avr_set_feature(env, AVR_FEATURE_2_BYTE_PC);
+    avr_set_feature(env, AVR_FEATURE_2_BYTE_SP);
+    avr_set_feature(env, AVR_FEATURE_LPMX);
+    avr_set_feature(env, AVR_FEATURE_MOVW);
+    avr_set_feature(env, AVR_FEATURE_MUL);
+
+}*/
+
 typedef struct AVRCPUInfo {
     const char *name;
     void (*initfn)(Object *obj);
@@ -514,6 +551,7 @@ static const AVRCPUInfo avr_cpus[] = {
     {.name = "xmega5", .initfn = avr_xmega5_initfn},
     {.name = "xmega6", .initfn = avr_xmega6_initfn},
     {.name = "xmega7", .initfn = avr_xmega7_initfn},
+//    {.name = "atmega8", .initfn = avr_atmega8_initfn},
 };
 
 static gint avr_cpu_list_compare(gconstpointer a, gconstpointer b)

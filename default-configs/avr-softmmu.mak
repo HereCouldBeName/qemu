@@ -19,3 +19,5 @@
 #
 
 # Default configuration for avr-softmmu
+
+CONFIG_AVR = y
