@@ -1975,6 +1975,8 @@ static int avr_translate_OR(DisasContext *ctx, uint32_t opcode)
     tcg_gen_movi_tl(cpu_Vf, 0);
     gen_ZNSf(R);
 
+    tcg_gen_mov_tl(Rd, R);
+
     tcg_temp_free_i32(R);
 
     return BS_NONE;

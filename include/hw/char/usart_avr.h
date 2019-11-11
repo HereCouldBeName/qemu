@@ -43,15 +43,16 @@
 
 #define URSEL       (1 << 7)
 
-#define TYPE_Atmega8_USART "atmega8-usart"
-#define Atmega8_USART(obj) \
-    OBJECT_CHECK(Atmega8UsartState, (obj), TYPE_Atmega8_USART)
+#define TYPE_AVR_USART "avr-usart"
+#define AVR_USART(obj) \
+    OBJECT_CHECK(AvrUsartState, (obj), TYPE_AVR_USART)
+
 typedef struct {
     /* <private> */
     SysBusDevice parent_obj;
 
     /* <public> */
-    MemoryRegion mmio;
+    //MemoryRegion mmio;
 
     uint32_t udr;
     uint32_t ucsra;
@@ -64,11 +65,11 @@ typedef struct {
 
     CharBackend chr;
     qemu_irq irq;
-} Atmega8UsartState;
+} AvrUsartState;
 
-uint64_t atmega8_usart_read(Atmega8UsartState *s, hwaddr addr,
+uint64_t avr_usart_read(AvrUsartState *s, hwaddr addr,
                                        unsigned int size);
-void atmega8_usart_write(Atmega8UsartState *s, hwaddr addr,
+void avr_usart_write(AvrUsartState *s, hwaddr addr,
                                   uint64_t val64, unsigned int size);
 
 #endif /* HW_Atmega8a_USART_H */

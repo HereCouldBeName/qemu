@@ -21,3 +21,6 @@
 # Default configuration for avr-softmmu
 
 CONFIG_AVR = y
+CONFIG_AVR_I2C = y
+CONFIG_I2C = y
+CONFIG_HD44780 = y

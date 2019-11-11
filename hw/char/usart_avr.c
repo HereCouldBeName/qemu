@@ -22,28 +22,23 @@
  * THE SOFTWARE.
  */
 
-#define PHYS_BASE_REGS 0x10000000
-#define AVR_CPU_REGS_BASE 0x0000
-#define AVR_CPU_REGS 0x0020
-#define AVR_CPU_IO_REGS_BASE (AVR_CPU_REGS_BASE + AVR_CPU_REGS)
-
 #include "qemu/osdep.h"
 #include "hw/char/usart_avr.h"
 #include "qemu/log.h"
 #include "exec/address-spaces.h"
 
-static int atmega8_usart_can_receive(void *opaque)
+static int avr_usart_can_receive(void *opaque)
 {
-    Atmega8UsartState *s = opaque;
+    AvrUsartState *s = opaque;
     if (!(s->ucsra & UCSRA_RXC)) {
         return 1;
     }
     return 0;
 }
 
-static void atmega8_usart_receive(void *opaque, const uint8_t *buf, int size)
+static void avr_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    Atmega8UsartState *s = opaque;
+    AvrUsartState *s = opaque;
     if (!(s->ucsrb & UCSRB_RXEN)) {
         /* USART not enabled - drop the chars */
         return;
@@ -57,9 +52,9 @@ static void atmega8_usart_receive(void *opaque, const uint8_t *buf, int size)
     }
 }
 
-static void atmega8_usart_reset(DeviceState *dev)
+static void avr_usart_reset(DeviceState *dev)
 {
-    Atmega8UsartState *s = Atmega8_USART(dev);
+    AvrUsartState *s = AVR_USART(dev);
 	
     s->udr   = 0x0;
     s->ucsra = 0x20;
@@ -72,7 +67,7 @@ static void atmega8_usart_reset(DeviceState *dev)
     qemu_set_irq(s->irq, 0);
 }
 
-uint64_t atmega8_usart_read(Atmega8UsartState *s, hwaddr addr,
+uint64_t avr_usart_read(AvrUsartState *s, hwaddr addr,
                                        unsigned int size)
 {
     switch (addr) {
@@ -104,7 +99,7 @@ uint64_t atmega8_usart_read(Atmega8UsartState *s, hwaddr addr,
     return 0;
 }
 
-void atmega8_usart_write(Atmega8UsartState *s, hwaddr addr,
+void avr_usart_write(AvrUsartState *s, hwaddr addr,
                                   uint64_t val64, unsigned int size)
 {
     uint32_t value = val64;
@@ -151,39 +146,39 @@ void atmega8_usart_write(Atmega8UsartState *s, hwaddr addr,
     }
 }
 
-static Property atmega8_usart_properties[] = {
-    DEFINE_PROP_CHR("chardev", Atmega8UsartState, chr),
+static Property avr_usart_properties[] = {
+    DEFINE_PROP_CHR("chardev", AvrUsartState, chr),
     DEFINE_PROP_END_OF_LIST(),
 };
 
-static void atmega8_usart_realize(DeviceState *dev, Error **errp)
+static void avr_usart_realize(DeviceState *dev, Error **errp)
 {
-    Atmega8UsartState *s = Atmega8_USART(dev);
+    AvrUsartState *s = AVR_USART(dev);
 
-    qemu_chr_fe_set_handlers(&s->chr, atmega8_usart_can_receive,
-                             atmega8_usart_receive, NULL, NULL,
+    qemu_chr_fe_set_handlers(&s->chr, avr_usart_can_receive,
+                             avr_usart_receive, NULL, NULL,
                              s, NULL, true);
 }
 
-static void atmega8_usart_class_init(ObjectClass *klass, void *data)
+static void avr_usart_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = atmega8_usart_reset;
-    dc->props = atmega8_usart_properties;
-    dc->realize = atmega8_usart_realize;
+    dc->reset = avr_usart_reset;
+    dc->props = avr_usart_properties;
+    dc->realize = avr_usart_realize;
 }
 
-static const TypeInfo atmega8_usart_info = {
-    .name          = TYPE_Atmega8_USART,
+static const TypeInfo avr_usart_info = {
+    .name          = TYPE_AVR_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Atmega8UsartState),
-    .class_init    = atmega8_usart_class_init,
+    .instance_size = sizeof(AvrUsartState),
+    .class_init    = avr_usart_class_init,
 };
 
-static void atmega8_usart_register_types(void)
+static void avr_usart_register_types(void)
 {
-    type_register_static(&atmega8_usart_info);
+    type_register_static(&avr_usart_info);
 }
 
-type_init(atmega8_usart_register_types)
+type_init(avr_usart_register_types)
