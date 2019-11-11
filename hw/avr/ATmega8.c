@@ -86,6 +86,11 @@ static void Atmega8_init(MachineState *machine)
     if (filename) {
         load_image_targphys(filename, PHYS_BASE_FLASH, SIZE_FLASH);
     }
+    /* TWI controller */
+    Atmega8State *s = Atmega8_SOC(dev);
+    DeviceState *bus_dev = i2c_create_slave(s->twi.bus, "avr_hd44780", 0x27);
+    object_property_set_int(OBJECT(bus_dev), 16, "columns", NULL);
+    object_property_set_int(OBJECT(bus_dev), 2, "rows", NULL);
 }
 
 static void Atmega8_machine_init(MachineClass *mc)

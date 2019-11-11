@@ -23,6 +23,16 @@
  */
 #include "hw/i2c/atmega8_twi.h"
 
+
+#define TWI_ERR_DEBUG 0
+
+#define DB_PRINT(...) do { \
+        if (TWI_ERR_DEBUG) { \
+            printf(__VA_ARGS__); \
+        } \
+    } while (0)
+
+
 /*static inline void exynos4210_i2c_raise_interrupt(Exynos4210I2CState *s)
 {
     if (s->i2ccon & I2CCON_INTRS_EN) {
@@ -76,7 +86,7 @@ void atmega8_twi_write(Atmega8TWIState *s, hwaddr addr,
                     s->start = false;
                     i2c_end_transfer(s->bus);
                     s->sending = false;
-                    qemu_log("STOP\n");
+                    DB_PRINT("STOP\n");
                 }
             }
         }
@@ -85,7 +95,7 @@ void atmega8_twi_write(Atmega8TWIState *s, hwaddr addr,
         s->twdr = value;
         if(s->start) {
             if(i2c_start_transfer(s->bus, (s->twdr)>>1, (s->twdr) & 0x1)) {
-                printf("ERROR start transfer\n");
+                DB_PRINT("ERROR start transfer\n");
             }
             else {
                 s->sending = true;
@@ -135,14 +145,7 @@ static void atmega8_twi_init(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
     Atmega8TWIState *s = ATMEGA8_TWI(obj);
-    /*SysBusDevice *sbd = SYS_BUS_DEVICE(obj);
-
-    sysbus_init_mmio(sbd, &s->iomem);
-    sysbus_init_irq(sbd, &s->irq);*/
     s->bus = i2c_init_bus(dev, "twi");
-    DeviceState *bus_dev = i2c_create_slave(s->bus, "avr_hd44780", 0x27);
-    object_property_set_int(OBJECT(bus_dev), 16, "columns", NULL);
-    object_property_set_int(OBJECT(bus_dev), 2, "rows", NULL);
 }
 
 static void atmega8_twi_class_init(ObjectClass *klass, void *data)

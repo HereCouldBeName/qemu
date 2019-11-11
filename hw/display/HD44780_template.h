@@ -1,7 +1,7 @@
 /*
- * QEMU Macintosh 128k draw line template
+ * QEMU HD44780 emulator.
  *
- * Copyright (c) 2015 Pavel Dovgalyuk
+ * Copyright (c) 2018-2020 HereCouldBeName
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -100,8 +100,6 @@ static void glue(draw_cursor_, DEPTH)(DisplaySurface *surface, int column, int l
             dest += surface_stride(surface) - BPP * SCALE * 5;
         }
     }
-//    dest = surface_data(surface) + (column * 6 * BPP * SCALE) + (line * surface_stride(surface) * (9 * SCALE)) +
-//            (surface_stride(surface)*SCALE*2) + (BPP*SCALE*2) + surface_stride(surface) * (8 * SCALE);
 }
 #undef DEPTH
 #undef BPP

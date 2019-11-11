@@ -26,9 +26,26 @@
 #define HW_AVR_Atmega8_SOC_H
 
 #include "hw/char/usart_avr.h"
+#include "hw/i2c/atmega8_twi.h"
 
 #define TYPE_Atmega8_SOC "atmega8-soc"
 #define Atmega8_SOC(obj) \
     OBJECT_CHECK(Atmega8State, (obj), TYPE_Atmega8_SOC)
+
+typedef struct Atmega8State {
+    /*< private >*/
+    SysBusDevice parent_obj;
+    /*< public >*/
+
+    char *cpu_type;
+
+    MemoryRegion *ram;
+    MemoryRegion *flash;
+    MemoryRegion *io;
+
+    AvrUsartState usart;
+    Atmega8TWIState twi;
+
+ } Atmega8State;
 
 #endif

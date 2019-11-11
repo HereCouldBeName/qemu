@@ -28,7 +28,6 @@
 #include "qemu-common.h"
 #include "exec/address-spaces.h"
 #include "hw/avr/atmega8_soc.h"
-#include "hw/i2c/atmega8_twi.h"
 #include "cpu.h"
 #include "sysemu/sysemu.h"
 
@@ -55,22 +54,6 @@
 #define FLASH_SIZE (1024 * 1024)
 #define SRAM_BASE_ADDRESS 0x20000000
 #define SRAM_SIZE (128 * 1024)
-
-typedef struct Atmega8State {
-    /*< private >*/
-    SysBusDevice parent_obj;
-    /*< public >*/
-
-    char *cpu_type;
-
-    MemoryRegion *ram;
-    MemoryRegion *flash;
-    MemoryRegion *io;
-
-    AvrUsartState usart;
-    Atmega8TWIState twi;
-
- } Atmega8State;
 
 static uint64_t atmega8_ioreg_read(void *opaque, hwaddr addr,
                                        unsigned int size)
@@ -180,11 +163,6 @@ static void atmega8_soc_realize(DeviceState *dev_soc, Error **errp)
         error_propagate(errp, err);
         return;
     }
-    /* TWI controller */
-    /*dev = sysbus_create_simple(TYPE_PPC4xx_I2C, 0x4ef600700, uic[0][2]);
-    i2c[0] = PPC4xx_I2C(dev);
-    object_property_set_bool(OBJECT(dev), true, "realized", NULL);
-    i2c_create_slave(i2c[0]->bus, "m41t80", 0x68);*/
 }
 
 static Property atmega8_soc_properties[] = {
