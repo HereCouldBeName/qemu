@@ -37,6 +37,7 @@
 #define E   0x04
 #define RS  0x01
 #define DB7 (1<<7)
+#define DB6 (1<<6)
 #define DB5 (1<<5)
 #define DB4 (1<<4)
 #define DB3 (1<<3)
@@ -46,115 +47,165 @@
 
 #define LEN 5
 
+#define COLUMNS_DDRAM 40
+#define ROWS_DDRAM 2
+
+#define SIZE_CGROM 128
+#define HEIGHT_CHAR 8
+
+#define SET_HEIGHT_SCREEN(rows) s->height = SCALE * 10 * rows + 2 * (SCALE * 2)
+#define SET_WIDTH_SCREEN(columns) s->width = SCALE * (LEN + 1) * columns + 2 * (SCALE * 2)
+
 typedef struct hd44780_state {
     I2CSlave parent_obj;
 
     bool rs;
     bool bit_mode_4;
-    bool IsAll;
-    uint8_t pos;
+    bool full_bit;
+    bool active_autoscroll;
+
+    /*
+     *I/D(id) - Address Counter Offset Mode
+     *I/D(id) = 1: Increment
+     *I/D(id) = 0: Decrement
+    */
+    bool id;
+
+    bool receive_custom_char;
+    uint8_t custom_pos;
+    int8_t pos;
     uint8_t total_char;
-    uint8_t poslast[2];
-    uint8_t offset;
+    int8_t offset;
     uint8_t full_data;
     uint8_t counter_mode;
     uint8_t counter;
     uint8_t cursor_pos;
+    /*
+     * cursor_type = 0 : Cursor off
+     * cursor_type = 1 : Blinking cursor
+     * cursor_type = 2 : Underline cursor
+     * cursor_type = 3 : Blinking underlined cursor
+    */
     uint8_t cursor_type; // 0 - no
     QemuConsole *con;
-    int invalidate;
-    unsigned char ddram[2][40];
-    QEMUTimer* timerl_offset;
+    uint8_t invalidate;
+    unsigned char ddram[ROWS_DDRAM][COLUMNS_DDRAM];
     QEMUTimer* timer_blink;
-    uint8_t column;
-    uint8_t line;
+    uint8_t columns;
+    uint8_t rows;
     uint16_t width;
     uint16_t height;
 
+    unsigned char CGRAM[8][8];
+    unsigned char CGROM[SIZE_CGROM][HEIGHT_CHAR];
 } hd44780_state;
+
+const unsigned char Symbols[SIZE_CGROM][HEIGHT_CHAR] = {
+    ['!'] = {0x1b,0x1b,0x1b,0x1b,0x1f,0x1f,0x1b,0x1f,},
+    ['"'] = {0x15,0x15,0x15,0x1f,0x1f,0x1f,0x1f,0x1f,},
+    ['#'] = {0x15,0x15,0x0,0x15,0x0,0x15,0x15,0x1f,},
+    ['$'] = {0x1b,0x10,0xB,0x11,0x1A,0x1,0x1b,0x1f,},
+    ['%'] = {0x7,0x6,0x1d,0x1b,0x17,0xc,0x1c,0x1f,},
+    ['&'] = {0x17,0xb,0xb,0x16,0xa,0xd,0x12,0x1f,},
+    ['\''] = {0x13,0x1b,0x17,0x1f,0x1f,0x1f,0x1f,0x1f,},
+    ['('] = {0x1d,0x1b,0x17,0x17,0x17,0x1b,0x1d,0x1f,},
+    [')'] = {0x17,0x1b,0x1d,0x1d,0x1d,0x1b,0x17,0x1f,},
+    ['*'] = {0x1b,0xa,0x11,0x1b,0x11,0xa,0x1b,0x1f,},
+    ['+'] = {0x1f,0x1b,0x1b,0x0,0x1b,0x1b,0x1f,0x1f,},
+    [','] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x13,0x13,0x1f,},
+    ['-'] = {0x1f,0x1f,0x1f,0x0,0x1f,0x1f,0x1f,0x1f,},
+    ['.'] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x13,0x13,0x1f,},
+    ['/'] = {0x1f,0x1e,0x1d,0x1b,0x17,0xf,0x1f,0x1f,},
+    ['0'] = {0x11,0xe,0xc,0xa,0x6,0xe,0x11,0x1f,},
+    ['1'] = {0x1b,0x13,0x1b,0x1b,0x1b,0x1b,0x11,0x1f,},
+    ['2'] = {0x11,0xe,0x1e,0x1d,0x1b,0x17,0x0,0x1f,},
+    ['3'] = {0x0,0x1d,0x1b,0x1d,0x1e,0xe,0x11,0x1f,},
+    ['4'] = {0x1d,0x19,0x15,0xd,0x0,0x1d,0x1d,0x1f,},
+    ['5'] = {0x0,0xf,0x1,0x1E,0x1E,0xE,0x11,0x1f,},
+    ['6'] = {0x19,0x17,0xF,0x1,0xE,0xE,0x11,0x1f,},
+    ['7'] = {0x00,0x1E,0x1D,0x1B,0x17,0x17,0x17,0x1F,},
+    ['8'] = {0x11,0x0E,0x0E,0x11,0x0E,0x0E,0x11,0x1F,},
+    ['9'] = {0x11,0x0E,0x0E,0x10,0x1E,0x1D,0x13,0x1F,},
+    [':'] = {0x1F,0x13,0x13,0x1F,0x13,0x13,0x1F,0x1F,},
+    [';'] = {0x1F,0x13,0x13,0x1F,0x13,0x1B,0x17,0x1F,},
+    ['<'] = {0x1D,0x1B,0x17,0x0F,0x17,0x1B,0x1D,0x1F,},
+    ['='] = {0x1F,0x1F,0x00,0x1F,0x00,0x1F,0x1F,0x1F,},
+    ['>'] = {0x17,0x1B,0x1D,0x1E,0x1D,0x1B,0x17,0x1F,},
+    ['?'] = {0x11,0x0E,0x1E,0x1D,0x1B,0x1F,0x1B,0x1F,},
+    ['@'] = {0x11,0xe,0x1e,0x12,0xa,0xa,0x11,0x1f,},
+    ['A'] = {0x11,0xe,0xe,0xe,0x0,0xe,0xe,0x1f,},
+    ['B'] = {0x1,0xe,0xe,0x1,0xe,0xe,0x1,0x1f,},
+    ['C'] = {0x11,0xe,0xf,0xf,0xf,0xe,0x11,0x1f,},
+    ['D'] = {0x3,0xd,0xe,0xe,0xe,0xd,0x3,0x1f,},
+    ['E'] = {0x0,0xf,0xf,0x1,0xf,0xf,0x0,0x1f,},
+    ['F'] = {0x0,0xf,0xf,0x1,0xf,0xf,0xf,0x1f,},
+    ['G'] = {0x11,0xe,0xf,0x8,0xe,0xe,0x11,0x1f,},
+    ['H'] = {0xe,0xe,0xe,0x0,0xe,0xe,0xe,0x1f,},
+    ['I'] = {0x11,0x1b,0x1b,0x1b,0x1b,0x1b,0x11,0x1f,},
+    ['J'] = {0x18,0x1d,0x1d,0x1d,0x1d,0xd,0x13,0x1f,},
+    ['K'] = {0xe,0xd,0xb,0x7,0xb,0xd,0xe,0x1f,},
+    ['L'] = {0xf,0xf,0xf,0xf,0xf,0xf,0x0,0x1f,},
+    ['M'] = {0xe,0x4,0xa,0xa,0xe,0xe,0xe,0x1f,},
+    ['N'] = {0xe,0xe,0x6,0xa,0xc,0xe,0xe,0x1f,},
+    ['O'] = {0x11,0xe,0xe,0xe,0xe,0xe,0x11,0x1f,},
+    ['P'] = {0x1,0xe,0xe,0x1,0xf,0xf,0xf,0x1f,},
+    ['Q'] = {0x11,0xe,0xe,0xe,0xa,0xd,0x12,0x1f,},
+    ['R'] = {0x1,0xe,0xe,0x1,0xb,0xd,0xe,0x1f,},
+    ['S'] = {0x11,0xe,0xf,0x11,0x1e,0xe,0x11,0x1f,},
+    ['T'] = {0x0,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1f,},
+    ['U'] = {0xe,0xe,0xe,0xe,0xe,0xe,0x11,0x1f,},
+    ['V'] = {0xe,0xe,0xe,0xe,0xe,0x15,0xb,0x1f,},
+    ['W'] = {0xe,0xe,0xe,0xa,0xa,0xa,0x15,0x1f,},
+    ['X'] = {0xe,0xe,0x15,0x1b,0x15,0xe,0xe,0x1f,},
+    ['Y'] = {0xe,0xe,0xe,0x15,0x1b,0x1b,0x1b,0x1f,},
+    ['Z'] = {0x0,0x1e,0x1d,0x1b,0x17,0xf,0x0,0x1f,},
+    ['['] = {0x11,0x17,0x17,0x17,0x17,0x17,0x11,0x1f,},
+    [']'] = {0x11,0x1d,0x1d,0x1d,0x1d,0x1d,0x11,0x1f,},
+    ['^'] = {0x1b,0x15,0xe,0x1f,0x1f,0x1f,0x1f,0x1f,},
+    ['_'] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x0,0x1f,},
+    ['`'] = {0x17,0x1b,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,},
+    ['a'] = {0x1f,0x1f,0x11,0x1e,0x10,0xe,0x10,0x1f,},
+    ['b'] = {0xf,0xf,0x9,0x6,0xe,0xe,0x1,0x1f,},
+    ['c'] = {0x1f,0x1f,0x11,0xf,0xf,0xe,0x11,0x1f,},
+    ['d'] = {0x1e,0x1e,0x10,0xe,0xe,0xe,0x10,0x1f,},
+    ['e'] = {0x1f,0x1f,0x11,0xe,0x0,0xf,0x11,0x1f,},
+    ['f'] = {0x19,0x16,0x17,0x3,0x17,0x17,0x17,0x1f,},
+    ['g'] = {0x1f,0x1f,0x10,0xe,0x10,0x1e,0x11,0x1f,},
+    ['h'] = {0xf,0xf,0x9,0x6,0xe,0xe,0xe,0x1f,},
+    ['i'] = {0x1b,0x1f,0x13,0x1b,0x1b,0x1b,0x11,0x1f,},
+    ['j'] = {0x1d,0x1f,0x19,0x1d,0x1d,0xd,0x13,0x1f,},
+    ['k'] = {0xf,0xf,0xd,0xb,0x7,0xb,0xd,0x1f,},
+    ['l'] = {0x13,0x1b,0x1b,0x1b,0x1b,0x1b,0x11,0x1f,},
+    ['m'] = {0x1f,0x1f,0x5,0xa,0xa,0xe,0xe,0x1f,},
+    ['n'] = {0x1f,0x1f,0x9,0x6,0xe,0xe,0xe,0x1f,},
+    ['o'] = {0x1f,0x1f,0x11,0xe,0xe,0xe,0x11,0x1f,},
+    ['p'] = {0x1f,0x1f,0x1,0xe,0x1,0xf,0xf,0x1f,},
+    ['q'] = {0x1f,0x1f,0x10,0xe,0x10,0x1e,0x1e,0x1f,},
+    ['r'] = {0x1f,0x1f,0x14,0x13,0x17,0x17,0x17,0x1f,},
+    ['s'] = {0x1f,0x1f,0x11,0xf,0x11,0x1e,0x1,0x1f,},
+    ['t'] = {0x1b,0x1b,0x0,0x1b,0x1b,0x1b,0x1c,0x1f,},
+    ['u'] = {0x1f,0x1f,0xe,0xe,0xe,0xc,0x12,0x1f,},
+    ['v'] = {0x1f,0x1f,0xe,0xe,0xe,0x15,0x1b,0x1f,},
+    ['w'] = {0x1f,0x1f,0xe,0xe,0xa,0xa,0x15,0x1f,},
+    ['x'] = {0x1f,0x1f,0xe,0x15,0x1b,0x15,0xe,0x1f,},
+    ['y'] = {0x1f,0x1f,0xe,0xe,0x10,0x1e,0x11,0x1f,},
+    ['z'] = {0x1f,0x1f,0x0,0x1d,0x1b,0x17,0x0,0x1f,},
+    ['{'] = {0x1D,0x1B,0x1B,0x17,0x1B,0x1B,0x1D,0x1F,},
+    ['|'] = {0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,0x1B,},
+    ['}'] = {0x17,0x1B,0x1B,0x1D,0x1B,0x1B,0x17,0x1F,},
+    [' '] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,},};
+
+
+
+
+
+
+
+
 
 typedef void (*drawchfn)(const uint8_t *, DisplaySurface *, int, int);
 typedef void (*drawcursfn)(DisplaySurface *, int, int, int, bool);
 
-unsigned char CGRAM[][7] = {['H'] = {0xe,0xe,0xe,0x0,0xe,0xe,0xe,},
-                            ['e'] = {0x1f,0x1f,0x11,0xe,0x0,0xf,0x11,},
-                            ['l'] = {0x13,0x1b,0x1b,0x1b,0x1b,0x1b,0x11,},
-                            ['o'] = {0x1f,0x1f,0x11,0xe,0xe,0xe,0x11,},
-                            [' '] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,},
-                            ['W'] = {0xe,0xe,0xe,0xa,0xa,0xa,0x15,},
-                            ['r'] = {0x1f,0x1f,0x14,0x13,0x17,0x17,0x17,},
-                            ['d'] = {0x1e,0x1e,0x10,0xe,0xe,0xe,0x10,},
-                            ['!'] = {0x1b,0x1b,0x1b,0x1b,0x1f,0x1f,0x1b,},
-                            ['S'] = {0x11,0xe,0xf,0x11,0x1e,0xe,0x11,},
-                            ['t'] = {0x1b,0x1b,0x0,0x1b,0x1b,0x1b,0x1c,},
-                            ['i'] = {0x1b,0x1f,0x13,0x1b,0x1b,0x1b,0x11,},
-                            ['n'] = {0x1f,0x1f,0x9,0x6,0xe,0xe,0xe,},
-                            ['g'] = {0x1f,0x1f,0x10,0xe,0x10,0x1e,0x11,},
-                            ['"'] = {0x15,0x15,0x15,0x1f,0x1f,0x1f,0x1f,},
-                            ['#'] = {0x15,0x15,0x0,0x15,0x0,0x15,0x15,},
-                            ['$'] = {0x1b,0x10,0xB,0x11,0x1A,0x1,0x1b,},
-                            ['%'] = {0x7,0x6,0x1d,0x1b,0x17,0xc,0x1c,},
-                            ['&'] = {0x17,0xb,0xb,0x16,0xa,0xd,0x12,},
-                            ['\''] = {0x13,0x1b,0x17,0x1f,0x1f,0x1f,0x1f,},
-                            ['('] = {0x1d,0x1b,0x17,0x17,0x17,0x1b,0x1d,},
-                            [')'] = {0x17,0x1b,0x1d,0x1d,0x1d,0x1b,0x17,},
-                            ['*'] = {0x1b,0xa,0x11,0x1b,0x11,0xa,0x1b,},
-                            ['+'] = {0x1f,0x1b,0x1b,0x0,0x1b,0x1b,0x1f,},
-                            [','] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x13,0x13,},
-                            ['-'] = {0x1f,0x1f,0x1f,0x0,0x1f,0x1f,0x1f,},
-                            ['.'] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x13,0x13,},
-                            ['/'] = {0x1f,0x1e,0x1d,0x1b,0x17,0xf,0x1f,},
-                            ['0'] = {0x11,0xe,0xc,0xa,0x6,0xe,0x11,},
-                            ['1'] = {0x1b,0x13,0x1b,0x1b,0x1b,0x1b,0x11,},
-                            ['2'] = {0x11,0xe,0x1e,0x1d,0x1b,0x17,0x0,},
-                            ['3'] = {0x0,0x1d,0x1b,0x1d,0x1e,0xe,0x11,},
-                            ['4'] = {0x1d,0x19,0x15,0xd,0x0,0x1d,0x1d,},
-                            ['@'] = {0x11,0xe,0x1e,0x12,0xa,0xa,0x11,},
-                            ['A'] = {0x11,0xe,0xe,0xe,0x0,0xe,0xe,},
-                            ['B'] = {0x1,0xe,0xe,0x1,0xe,0xe,0x1,},
-                            ['C'] = {0x11,0xe,0xf,0xf,0xf,0xe,0x11,},
-                            ['D'] = {0x3,0xd,0xe,0xe,0xe,0xd,0x3,},
-                            ['E'] = {0x0,0xf,0xf,0x1,0xf,0xf,0x0,},
-                            ['F'] = {0x0,0xf,0xf,0x1,0xf,0xf,0xf,},
-                            ['G'] = {0x11,0xe,0xe,0x8,0xe,0xe,0x10,},
-                            ['I'] = {0x11,0x1b,0x1b,0x1b,0x1b,0x1b,0x11,},
-                            ['J'] = {0x18,0x1d,0x1d,0x1d,0x1d,0xd,0x13,},
-                            ['K'] = {0xe,0xd,0xb,0x7,0xb,0xd,0xe,},
-                            ['L'] = {0xf,0xf,0xf,0xf,0xf,0xf,0x0,},
-                            ['M'] = {0xe,0x4,0xa,0xa,0xe,0xe,0xe,},
-                            ['N'] = {0xe,0xe,0x6,0xa,0xc,0xe,0xe,},
-                            ['O'] = {0x11,0xe,0xe,0xe,0xe,0xe,0x11,},
-                            ['P'] = {0x1,0xe,0xe,0x1,0xf,0xf,0xf,},
-                            ['Q'] = {0x11,0xe,0xe,0xe,0xa,0xd,0x12,},
-                            ['R'] = {0x1,0xe,0xe,0x1,0xb,0xd,0xe,},
-                            ['T'] = {0x0,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,},
-                            ['U'] = {0xe,0xe,0xe,0xe,0xe,0xe,0x11,},
-                            ['V'] = {0xe,0xe,0xe,0xe,0xe,0x15,0xb,},
-                            ['X'] = {0xe,0xe,0x15,0x1b,0x15,0xe,0xe,},
-                            ['Y'] = {0xe,0xe,0xe,0x15,0x1b,0x1b,0x1b,},
-                            ['Z'] = {0x0,0x1e,0x1d,0x1b,0x17,0xf,0x0,},
-                            ['['] = {0x11,0x17,0x17,0x17,0x17,0x17,0x11,},
-                            [']'] = {0x11,0x1d,0x1d,0x1d,0x1d,0x1d,0x11,},
-                            ['^'] = {0x1b,0x15,0xe,0x1f,0x1f,0x1f,0x1f,},
-                            ['_'] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x0,},
-                            ['`'] = {0x17,0x1b,0x1f,0x1f,0x1f,0x1f,0x1f,},
-                            ['a'] = {0x1f,0x1f,0x11,0x1e,0x10,0xe,0x10,},
-                            ['b'] = {0xf,0xf,0x9,0x6,0xe,0xe,0x1,},
-                            ['c'] = {0x1f,0x1f,0x11,0xf,0xf,0xe,0x11,},
-                            ['f'] = {0x19,0x16,0x17,0x3,0x17,0x17,0x17,},
-                            ['h'] = {0xf,0xf,0x9,0x6,0xe,0xe,0xe,},
-                            ['j'] = {0x1d,0x1f,0x19,0x1d,0x1d,0xd,0x13,},
-                            ['k'] = {0xf,0xf,0xd,0xb,0x7,0xb,0xd,},
-                            ['m'] = {0x1f,0x1f,0x5,0xa,0xa,0xe,0xe,},
-                            ['p'] = {0x1f,0x1f,0x1,0xe,0x1,0xf,0xf,},
-                            ['q'] = {0x1f,0x1f,0x10,0xe,0x10,0x1e,0x1e,},
-                            ['s'] = {0x1f,0x1f,0x11,0xf,0x11,0x1e,0x1,},
-                            ['u'] = {0x1f,0x1f,0xe,0xe,0xe,0xc,0x12,},
-                            ['v'] = {0x1f,0x1f,0xe,0xe,0xe,0x15,0x1b,},
-                            ['w'] = {0x1f,0x1f,0xe,0xe,0xa,0xa,0x15,},
-                            ['x'] = {0x1f,0x1f,0xe,0x15,0x1b,0x15,0xe,},
-                            ['y'] = {0x1f,0x1f,0xe,0xe,0x10,0x1e,0x11,},
-                            ['z'] = {0x1f,0x1f,0x0,0x1d,0x1b,0x17,0x0,},};
 #define DEPTH 8
 #include "HD44780_template.h"
 #define DEPTH 15
@@ -193,8 +244,7 @@ static void initialization_mode(hd44780_state *s, uint8_t data){
             s->counter_mode++;
         } else if (s->counter_mode == 3 && data == 0x20) {
             s->counter_mode++;
-        }
-        else {
+        } else {
             printf("ERROR: Failed initialization \n");
         }
         break;
@@ -212,123 +262,158 @@ static void initialization_mode(hd44780_state *s, uint8_t data){
     }
 }
 
-static void timer_function(void *opaque)
-{
-    hd44780_state *s = opaque;
-//    if(s->offset < (s->poslast[0] > s->poslast[1]?s->poslast[0]:s->poslast[1])) {
-//        timer_mod(s->timerl_offset,qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL)+800);
-//    }
-    if(s->total_char > 0) {
-        timer_mod(s->timerl_offset,qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL)+800);
-        s->total_char--;
-    }
-    s->cursor_pos--;
-    if(s->offset < 0x27) {
-        s->offset++;
-    } else {
-        s->offset = 0;
-        s->cursor_pos = s->pos;
-    }
-    printf("s->poslast[0] = %u\n",s->poslast[0]);
-    printf("s->poslast[0] = %u\n",s->poslast[1]);
-    printf("s->offset = %u\n",s->offset);
-}
-
 static void timer_blink_function(void *opaque)
 {
     hd44780_state *s = opaque;
 
     timer_mod(s->timer_blink,qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL)+500);
-    if (s->cursor_type == 3) {
-        s->cursor_type = 2;
-    } else if (s->cursor_type == 1) {
-        s->cursor_type = 0;
-    } else if (s->cursor_type == 2) {
-        s->cursor_type = 3;
-    } else if (s->cursor_type == 0) {
-        s->cursor_type = 1;
-    }
+    s->cursor_type ^= 1;
 }
 
 static void clear_display(hd44780_state *s) {
     s->pos          = 0;
     s->offset       = 0;
-    s->cursor_pos   = 0;
     s->total_char   = 0;
-    memset(s->poslast, 0, sizeof (s->poslast));
-    memset(s->ddram,0,sizeof(s->ddram[0][0])*2*40);
+    memset(s->ddram,0x80,sizeof(s->ddram[0][0])*ROWS_DDRAM*COLUMNS_DDRAM);
 }
 
 static void write_data(hd44780_state *s, uint8_t data) {
-    //printf("get: %x \n",data);
     data &= 0xF0;
-    if(s->IsAll) {
-        s->IsAll = false;
+    if (s->full_bit) {
+        s->full_bit = false;
         data >>= 4;
         s->full_data |= data;
-        //printf("%c \n",s->full_data);
-        if(s->pos >= 0x40) {
-            s->ddram[1][s->pos-0x40] = s->full_data;
-            s->poslast[1] = s->pos-0x40;
-            //s->cursor_pos = s->pos-0x40 + 0x1;
-        } else if(s->pos <= 0x27){
-            s->ddram[0][s->pos] = s->full_data;
-            s->poslast[0] = s->pos;
-            //s->cursor_pos = s->pos + 0x1;
+        if(s->receive_custom_char) {
+            uint8_t columns = s->custom_pos % 8;
+            uint8_t rows    = s->custom_pos / 8;
+            if(rows > 7) {
+                return;
+            }
+            /*
+             * invert bits, because for display 1 - set bit, but for the emulator, vice versa
+            */
+            s->CGRAM[rows][columns] =~ s->full_data;
+            s->custom_pos++;
+        } else {
+            if (s->pos >= 0x40) {
+                s->ddram[1][s->pos-0x40] = s->full_data;
+            } else if (s->pos <= 0x27){
+                s->ddram[0][s->pos] = s->full_data;
+            }
+            if (s->id) {
+                s->pos++;
+                /*
+                 * The gap is due to the fact that addressing uses seven-bit addressing,
+                 * and the high bit indicates which line of memory is involved.
+                */
+                if (s->pos > 0x27 && s->pos < 0x40) {
+                    s->pos = 0x40;
+                } else if (s->pos > 0x67) {
+                    s->pos = 0x0;
+                }
+            } else {
+                s->pos--;
+                if (s->pos < 0x0) {
+                    s->pos = 0x67;
+                } else if (s->pos > 0x27 && s->pos < 0x40) {
+                    s->pos = 0x27;
+                }
+            }
+
+            s->total_char++;
+
+            if (s->active_autoscroll) {
+                if (s->id) {
+                    if (s->offset < 0x27) {
+                        s->offset++;
+                    } else {
+                        s->offset = 0;
+                    }
+                } else {
+                    if (s->offset > -0x27) {
+                        s->offset--;
+                    } else {
+                        s->offset = 0;
+                    }
+                }
+            }
         }
-        s->total_char++;
-        s->pos++;
-        s->cursor_pos++;
+
         s->full_data = 0;
+
     } else {
-        s->IsAll = true;
+        s->full_bit = true;
         s->full_data |= data;
     }
 }
 
 static void write_command(hd44780_state *s, uint8_t data) {
     data &= 0xF0;
-    if(s->IsAll) {
-        s->IsAll = false;
+    if (s->full_bit) {
+        s->full_bit = false;
         data >>= 4;
         s->full_data |= data;
         printf("DATA is: %x\n", s->full_data);
         if (s->full_data & DB7) {
             s->pos = s->full_data&~DB7;
-            s->cursor_pos = s->pos;
-        } else if(s->full_data & DB5) {
-            if(s->full_data & DB4) {
+            s->receive_custom_char = false;
+        } else if (s->full_data & DB6) {
+            s->custom_pos = s->full_data &~ DB6;
+            s->receive_custom_char = true;
+            printf("CGRAM address\n");
+        } else if (s->full_data & DB5) {
+            if (s->full_data & DB4) {
                 printf("ERROR: expected unenabled DL\n");
             } else {
-                if(s->full_data & DB3) {
+                if (s->full_data & DB3) {
                     printf("number of lines of the display is 2 \n");
                 } else {
                     printf("number of lines of the display is 1 \n");
                 }
-                if(s->full_data & DB2) {
+                if (s->full_data & DB2) {
                     printf("font size is is 5x10 \n");
                 } else {
                     printf("font size is is 5x7 \n");
                 }
             }
-        } else if(s->full_data & DB4) {
+        } else if (s->full_data & DB4) {
             printf("offset: %x\n", s->offset);
-            if(s->full_data & DB3) {
+            if (s->full_data & DB3) {
                 printf("SDVIG USER DISPLEY\n");
-                s->cursor_pos--;
-                if(s->offset < 0x27) {
-                    s->offset++;
+                if (s->full_data & DB2) {
+                    printf("SDVIG USER RIGHT\n");
+                    if (s->offset > -0x27) {
+                        s->offset--;
+
+                    } else {
+                        s->offset = 0;
+                    }
                 } else {
-                    s->offset = 0;
-                    s->cursor_pos = s->pos;
+                    printf("SDVIG USER LEFT\n");
+                    if (s->offset < 0x27) {
+                        s->offset++;
+
+                    } else {
+                        s->offset = 0;
+                    }
                 }
             } else {
                 printf("SDVIG USER CURSOR\n");
-            }
-            if(s->full_data & DB2) {
-                printf("SDVIG USER RIGHT\n");
-            } else {
-                printf("SDVIG USER LEFT\n");
+                if (s->full_data & DB2) {
+                    printf("SDVIG USER RIGHT\n");
+                    if (s->pos < 0x67) {
+                        s->pos++;
+                    } else {
+                        s->pos = 0;
+                    }
+                } else {
+                    printf("SDVIG USER LEFT\n");
+                    if (s->pos > 0) {
+                        s->pos--;
+                    } else {
+                        s->pos = 0x67;
+                    }
+                }
             }
         } else if (s->full_data & DB3) {
             if (s->full_data & DB2) {
@@ -345,7 +430,7 @@ static void write_command(hd44780_state *s, uint8_t data) {
             }
             if (s->full_data & DB0) {
                 printf("Cursor blink on \n");
-                if(s->cursor_type == 2) {
+                if (s->cursor_type == 2) {
                     s->cursor_type = 3;
                 } else {
                     s->cursor_type = 1;
@@ -354,22 +439,23 @@ static void write_command(hd44780_state *s, uint8_t data) {
                 timer_mod(s->timer_blink,qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL)+500);
             } else {
                 printf("Cursor blink off \n");
-                if(s->cursor_type == 2) {
+                if (s->cursor_type == 2) {
                     s->cursor_type = 2;
                 } else {
                     s->cursor_type = 0;
                 }
+                timer_del(s->timer_blink);
             }
         } else if (s->full_data & DB2) {
             if (s->full_data & DB1) {
-                printf("move cursor right \n");
+                s->id = true;
+                printf("    move cursor right \n");
             } else {
+                s->id = false;
                 printf("move cursor left \n");
             }
             if (s->full_data & DB0) {
-                s->timerl_offset = timer_new_ms(QEMU_CLOCK_VIRTUAL, timer_function, s);
-                timer_mod(s->timerl_offset,qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL)+800);
-
+                s->active_autoscroll = true;
                 printf("move display on \n");
             } else {
                 printf("move display off \n");
@@ -377,22 +463,19 @@ static void write_command(hd44780_state *s, uint8_t data) {
         } else if (s->full_data & DB1) {
             s->pos          = 0;
             s->offset       = 0;
-            s->cursor_pos   = 0;
             s->total_char   = 0;
-            memset(s->poslast, 0, sizeof (s->poslast));
         } else if (s->full_data & DB0) {
             clear_display(s);
             printf("clear display \n");
         }
         s->full_data = 0;
     } else {
-        s->IsAll = true;
+        s->full_bit = true;
         s->full_data |= data;
     }
 }
 
 static void receive_byte(hd44780_state *s, uint8_t data) {
-    printf("counter is %u\n", s->counter);
     switch (s->counter % 7) {
     case 0:
         if(data & RS){
@@ -464,31 +547,25 @@ static int hd44780_send(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static uint16_t set_height(uint8_t line) {
-    return SCALE * 9 * line + 2 * (SCALE * 2);
-}
-static uint16_t set_width(uint8_t column) {
-    return SCALE * (LEN + 1) * column + 2 * (SCALE * 2);
-}
-
 static void hd44780_reset(DeviceState *dev)
 {
     hd44780_state *s = HD44780(dev);
 
-    s->rs           = false;
-    s->bit_mode_4   = false;
-    s->IsAll        = false;
-    s->full_data    = 0;
-    s->counter_mode = 0;
-    s->counter      = 0;
-    s->pos          = 0;
-    s->offset       = 0;
-    s->cursor_pos   = 0;
-    s->total_char   = 0;
-//    s->height       = set_height(1);
-//    s->width        = set_width(8);
-    memset(s->poslast, 0, sizeof (s->poslast));
-    memset(s->ddram,0,sizeof(s->ddram[0][0])*2*40);
+    s->rs                  = false;
+    s->bit_mode_4          = false;
+    s->full_bit            = false;
+    s->active_autoscroll   = false;
+    s->receive_custom_char = false;
+    s->id                  = false;
+    s->full_data           = 0;
+    s->counter_mode        = 0;
+    s->counter             = 0;
+    s->pos                 = 0;
+    s->offset              = 0;
+    s->total_char          = 0;
+    s->custom_pos          = 0;
+
+    memset(s->ddram,0x80,sizeof(s->ddram[0][0])*ROWS_DDRAM*COLUMNS_DDRAM);
 }
 
 static void hd44780_led_invalidate_display(void *opaque)
@@ -497,137 +574,108 @@ static void hd44780_led_invalidate_display(void *opaque)
     s->invalidate = 1;
 }
 
-
-static void hd44780_led_clear_display(void *opaque)
-{
-    hd44780_state *s = opaque;
-    DisplaySurface *surface = qemu_console_surface(s->con);
-
-    if (!surface_bits_per_pixel(surface)) {
-        return;
-    }
-
-    drawcursfn draw_cursor = draw_cursor_table[surface_bits_per_pixel(surface)];
-
-    if(s->line == 1) {
-        for(int i=0; i<s->column; i++) {
-            draw_cursor(surface,i,0,0,false);
-            draw_cursor(surface,i,0,0,true);
-        }
-    } else if(s->line == 2) {
-        for(int i=0; i<s->column; i++) {
-            for(int j=0; j<2; j++) {
-                draw_cursor(surface,i, j,0,false);
-                draw_cursor(surface,i, j,0,true);
-            }
-        }
-    } else if(s->line == 4) {
-        for(int i=0; i<s->column; i++) {
-            for(int j=0; j<4; j++) {
-                draw_cursor(surface,i, j,0,false);
-                draw_cursor(surface,i, j,0,true);
-            }
-        }
-    }
-
-    dpy_gfx_update(s->con, 0, 0,  s->width, s->height);
-    s->invalidate = 0;
-}
 /*
  * begin - position in ggram to start
- * end - position in ggram to end
- * line - line in ggram
- * column_disp - column in display
+ * num_char - number of characters to output at a time
+ * rows - rows in ggram
+ * columns_disp - columns in display
  * line_disp - line in display
 */
-static void hd44780_led_printf_str(uint8_t **src, DisplaySurface **surface, uint8_t begin, uint8_t end, uint8_t line, uint8_t column_disp, uint8_t line_disp, hd44780_state *s) {
+static void hd44780_led_printf_str(uint8_t **src, DisplaySurface **surface,
+                                   uint8_t begin, uint8_t num_char,
+                                   uint8_t rows, uint8_t columns_disp,
+                                   uint8_t rows_disp, hd44780_state *s) {
     drawchfn draw_char = draw_char_table[surface_bits_per_pixel(*surface)];
-    for(int i=begin + s->offset; i< s->offset + end && i < 0x28; i++, column_disp++) {
-        if(s->ddram[line][i] == 0x0) {
-            continue;
+    drawcursfn draw_cursor = draw_cursor_table[surface_bits_per_pixel(*surface)];
+
+    int left_border = begin + s->offset;
+    int i = left_border;
+
+    while(num_char > 0x0) {
+        if (i > 0x27) {
+            i -= 0x28;
+            left_border -= 0x28;
         }
-        *src = CGRAM[s->ddram[line][i]];
-        draw_char(*src,*surface,column_disp,line_disp);
+        else if (i < 0) {
+            i += 0x28;
+            left_border += 0x28;
+        }
+
+        /*
+         * draw character
+        */
+
+        *src = s->CGROM[' '];
+        if (s->ddram[rows][i] != 0x80) {
+            if(s->ddram[rows][i] <= 7) {
+                *src = s->CGRAM[s->ddram[rows][i]];
+            } else {
+                *src = s->CGROM[s->ddram[rows][i]];
+            }
+        }
+
+        draw_char(*src,*surface,columns_disp,rows_disp);
+
+        /*
+         * draw cursor
+        */
+        int cursor_pos = s->pos - 0x40 * rows;
+        //printf("cursor_pos : %x, i = %x, left_border = %x \n", cursor_pos, i, left_border);
+        if (i == cursor_pos) {
+            cursor_pos = i-left_border;
+            if (s->rows == 1 && rows == 1) {
+                cursor_pos += s->columns/2;
+            }
+            if (s->cursor_type == 3 || s->cursor_type == 2) {
+                draw_cursor(*surface,cursor_pos,rows_disp,0xff,false);
+            }
+            if (s->cursor_type == 3 || s->cursor_type == 1) {
+                draw_cursor(*surface,cursor_pos,rows_disp,0xff,true);
+            }
+        }
+        i++;
+        columns_disp++;
+        num_char--;
     }
 }
 
 static void hd44780_led_update_display(void *opaque)
 {
     hd44780_state *s = opaque;
-    printf("column: %u\n", s->column);
-    printf("line: %u\n", s->line);
     DisplaySurface *surface = qemu_console_surface(s->con);
     uint8_t *src;
     if (!surface_bits_per_pixel(surface)) {
         return;
     }
 
-    hd44780_led_clear_display(s);
-
     for(int j=0; j<2; j++) {
-        for(int i=s->offset; i<0x27; i++) {
-            printf("%c ",s->ddram[j][i]);
+        for(int i=0; i<=0x27; i++) {
+            printf("%i",s->ddram[j][i]);
+        }
+        printf("\n");
+    }
+    for(int i=0; i<8; i++) {
+        for(int j=0; j<8; j++) {
+            printf("0x%x ", s->CGRAM[i][j]);
         }
         printf("\n");
     }
 
-    drawcursfn draw_cursor = draw_cursor_table[surface_bits_per_pixel(surface)];
 
-    /*for 8x2 16x2 20x2*/
-    if(s->line == 1) {
-        hd44780_led_printf_str(&src,&surface,0,s->column/2,0,0,0,s);
-        hd44780_led_printf_str(&src,&surface,0,s->column/2,1,s->column/2,0,s);
-    } else if(s->line == 2) {
-        hd44780_led_printf_str(&src,&surface,0,s->column,0,0,0,s);
-        hd44780_led_printf_str(&src,&surface,0,s->column,1,0,1,s);
-    } else if(s->line == 4) {
+    if (s->rows == 1) {
+        hd44780_led_printf_str(&src,&surface,0,s->columns/2,0,0,0,s);
+        hd44780_led_printf_str(&src,&surface,0,s->columns/2,1,s->columns/2,0,s);
+    } else if (s->rows == 2) {
+        hd44780_led_printf_str(&src,&surface,0,s->columns,0,0,0,s);
+        hd44780_led_printf_str(&src,&surface,0,s->columns,1,0,1,s);
+    } else if (s->rows == 4) {
         for (int i=0;i<2;i++) {
-            hd44780_led_printf_str(&src,&surface,0,s->column,i,0,i,s);
-            hd44780_led_printf_str(&src,&surface,s->column,s->column*2,i,0,2+i,s);
+            hd44780_led_printf_str(&src,&surface,0,s->columns,i,0,i,s);
+            hd44780_led_printf_str(&src,&surface,s->columns,s->columns,i,0,2+i,s);
         }
     }
 
-    if(s->line == 1) {
-        if(s->cursor_pos >= 0x40 && s->cursor_pos < 0x40 + s->column/2) {
-            draw_cursor(surface,s->cursor_pos - 0x40  + s->column/2 ,0,0xff,false);
-            if(s->cursor_pos == 0x40) {
-                s->cursor_pos = s->poslast[0]-s->offset+1;
-            }
-        } else if(s->cursor_pos <= (s->column / 2)) {
-            draw_cursor(surface,s->cursor_pos,0,0xff,false);
-            printf("s->cursor_pos = %u\n",s->cursor_pos);
-        }
-    } else if(s->line == 2){
-        if(s->cursor_pos >= 0x40 && s->cursor_pos < 0x40 + s->column) {
-            if (s->cursor_type == 3 || s->cursor_type == 2) {
-                draw_cursor(surface,s->cursor_pos - 0x40,1,0xff,false);
-            }
-            if (s->cursor_type == 3 || s->cursor_type == 1) {
-                draw_cursor(surface,s->cursor_pos - 0x40,1,0xff,true);
-            }
-        } else if(s->cursor_pos <= s->column) {
-            if (s->cursor_type == 3 || s->cursor_type == 2) {
-                draw_cursor(surface,s->cursor_pos,0,0xff,false);
-            }
-            if (s->cursor_type == 3 || s->cursor_type == 1) {
-                draw_cursor(surface,s->cursor_pos,0,0xff,true);
-            }
-        }
-    } else if(s->line == 4){
-        printf("s->cursor_pos = 0x%x\n",s->cursor_pos);
-        if(s->cursor_pos >= 0x40 && s->cursor_pos < 0x40 + s->column) { // line 2
-            draw_cursor(surface,s->cursor_pos - 0x40,1,0xff,false);
-        } else if(s->cursor_pos >= 0x40 + s->column && s->cursor_pos < 0x40 + s->column * 2) { // line 4
-            draw_cursor(surface,s->cursor_pos - 0x40 - s->column,3,0xff,false);
-        } else if(s->cursor_pos <= s->column) {  //line 1
-            draw_cursor(surface,s->cursor_pos,0,0xff,false);
-        } else if(s->cursor_pos <= s->column * 2) {  //line 3
-            draw_cursor(surface,s->cursor_pos - s->column,2,0xff,false);
-        }
-    }
-//    if(last_column < 0x10)
-//        draw_cursor(surface,last_column,last_line, 0xff);
-    printf("s->width = %u , s->height = %u", s->width, s->height);
+    printf("s->width = %u , s->height = %u, s->offset = %u", s->width, s->height, s->offset);
     dpy_gfx_update(s->con, 0, 0, s->width, s->height);
     s->invalidate = 0;
 }
@@ -640,53 +688,54 @@ static const GraphicHwOps hd44780_led_ops = {
 static void hd44780_realize(DeviceState *dev, Error **errp)
 {
     hd44780_state *s = HD44780(dev);
-    s->column = 8;
-    s->line   = 1;
-    s->width  = set_width(8);
-    s->height = set_height(1);
+    s->columns = 8;
+    s->rows   = 1;
+    SET_WIDTH_SCREEN(8);
+    SET_HEIGHT_SCREEN(1);
     s->con = graphic_console_init(dev, 0, &hd44780_led_ops, s);
+    memcpy(s->CGROM, Symbols, SIZE_CGROM * HEIGHT_CHAR);
 }
 
-static void hd44780_set_column(Object *obj, Visitor *v, const char *name,
+static void hd44780_set_columns(Object *obj, Visitor *v, const char *name,
                                    void *opaque, Error **errp)
 {
     hd44780_state *s = HD44780(obj);
     Error *local_err = NULL;
-    uint8_t column;
+    uint8_t columns;
 
-    visit_type_uint8(v, name, &column, &local_err);
+    visit_type_uint8(v, name, &columns, &local_err);
 //    if (local_err) {
 //        error_propagate(errp, local_err);
 //        return;
 //    }
-    s->width = set_width(column);
-    s->column = column;
+    SET_WIDTH_SCREEN(columns);
+    s->columns = columns;
     qemu_console_resize(s->con, s->width, s->height);
 }
-static void hd44780_set_line(Object *obj, Visitor *v, const char *name,
+static void hd44780_set_rows(Object *obj, Visitor *v, const char *name,
                                    void *opaque, Error **errp)
 {
     hd44780_state *s = HD44780(obj);
     Error *local_err = NULL;
-    uint8_t line;
+    uint8_t rows;
 
-    visit_type_uint8(v, name, &line, &local_err);
+    visit_type_uint8(v, name, &rows, &local_err);
 //    if (local_err) {
 //        error_propagate(errp, local_err);
 //        return;
 //    }
-    s->height = set_height(line);
-    s->line = line;
+    SET_HEIGHT_SCREEN(rows);
+    s->rows = rows;
     qemu_console_resize(s->con, s->width, s->height);
 }
 
 static void hd44780_initfn(Object *obj)
 {
-    object_property_add(obj, "column", "uint8_t",
-                        NULL, hd44780_set_column,
+    object_property_add(obj, "columns", "uint8_t",
+                        NULL, hd44780_set_columns,
                         NULL, NULL, NULL);
-    object_property_add(obj, "line", "uint8_t",
-                        NULL, hd44780_set_line,
+    object_property_add(obj, "rows", "uint8_t",
+                        NULL, hd44780_set_rows,
                         NULL, NULL, NULL);
 }
 

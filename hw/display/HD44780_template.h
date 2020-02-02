@@ -50,9 +50,9 @@ static void glue(draw_char_, DEPTH)(const uint8_t *s, DisplaySurface *surface, i
     uint8_t r, g, b, mask;
     uint8_t *dest;
 
-    dest = surface_data(surface) + (column * 6 * BPP * SCALE) + (line * surface_stride(surface) * (9 * SCALE)) +
+    dest = surface_data(surface) + (column * 6 * BPP * SCALE) + (line * surface_stride(surface) * (10 * SCALE)) +
             (surface_stride(surface)*SCALE*2) + (BPP*SCALE*2);
-    for(uint8_t l=0; l<7; l++) {
+    for(uint8_t l=0; l<8; l++) {
         for(uint8_t ls=0; ls<SCALE; ls++) {
             for (mask = 0x10 ; mask ; mask >>= 1) {
                 for(uint8_t ws=0; ws<SCALE; ws++) {
@@ -67,6 +67,16 @@ static void glue(draw_char_, DEPTH)(const uint8_t *s, DisplaySurface *surface, i
         }
         s++;
     }
+
+    r = 1; g = 1; b = 1;
+
+    for(uint8_t ls = 0; ls < SCALE; ls++) {
+        for(uint8_t i = 0; i < 5*SCALE; i++) {
+            ((PIXEL_TYPE *) dest)[0] = glue(rgb_to_pixel, DEPTH)(r, g, b);
+            dest += BPP;
+        }
+        dest += surface_stride(surface) - BPP * SCALE * 5;
+    }
 }
 
 static void glue(draw_cursor_, DEPTH)(DisplaySurface *surface, int column, int line, int option, bool is_square)
@@ -74,7 +84,7 @@ static void glue(draw_cursor_, DEPTH)(DisplaySurface *surface, int column, int l
     uint8_t r = option, g = option, b = option;
     uint8_t *dest;
 
-    dest = surface_data(surface) + (column * 6 * BPP * SCALE) + (line * surface_stride(surface) * (9 * SCALE)) +
+    dest = surface_data(surface) + (column * 6 * BPP * SCALE) + (line * surface_stride(surface) * (10 * SCALE)) +
             (surface_stride(surface)*SCALE*2) + (BPP*SCALE*2);
     uint8_t count_line = 8;
     if (!is_square) {

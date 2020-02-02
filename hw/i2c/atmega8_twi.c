@@ -141,8 +141,8 @@ static void atmega8_twi_init(Object *obj)
     sysbus_init_irq(sbd, &s->irq);*/
     s->bus = i2c_init_bus(dev, "twi");
     DeviceState *bus_dev = i2c_create_slave(s->bus, "avr_hd44780", 0x27);
-    object_property_set_int(OBJECT(bus_dev), 16, "column", NULL);
-    object_property_set_int(OBJECT(bus_dev), 2, "line", NULL);
+    object_property_set_int(OBJECT(bus_dev), 16, "columns", NULL);
+    object_property_set_int(OBJECT(bus_dev), 2, "rows", NULL);
 }
 
 static void atmega8_twi_class_init(ObjectClass *klass, void *data)
