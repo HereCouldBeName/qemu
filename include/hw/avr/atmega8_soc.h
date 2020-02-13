@@ -32,20 +32,6 @@
 #define Atmega8_SOC(obj) \
     OBJECT_CHECK(Atmega8State, (obj), TYPE_Atmega8_SOC)
 
-typedef struct Atmega8State {
-    /*< private >*/
-    SysBusDevice parent_obj;
-    /*< public >*/
-
-    char *cpu_type;
-
-    MemoryRegion *ram;
-    MemoryRegion *flash;
-    MemoryRegion *io;
-
-    AvrUsartState usart;
-    Atmega8TWIState twi;
-
- } Atmega8State;
+DeviceState *add_device_to_bus(DeviceState *dev, const char *name, uint8_t addr);
 
 #endif

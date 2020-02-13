@@ -55,6 +55,28 @@
 #define SRAM_BASE_ADDRESS 0x20000000
 #define SRAM_SIZE (128 * 1024)
 
+typedef struct Atmega8State {
+    /*< private >*/
+    SysBusDevice parent_obj;
+    /*< public >*/
+
+    char *cpu_type;
+
+    MemoryRegion *ram;
+    MemoryRegion *flash;
+    MemoryRegion *io;
+
+    AvrUsartState usart;
+    Atmega8TWIState twi;
+
+ } Atmega8State;
+
+DeviceState *add_device_to_bus(DeviceState *dev, const char *name, uint8_t addr)
+{
+    Atmega8State *s = Atmega8_SOC(dev);
+    return i2c_create_slave(s->twi.bus, "avr_hd44780", 0x27);
+}
+
 static uint64_t atmega8_ioreg_read(void *opaque, hwaddr addr,
                                        unsigned int size)
 {

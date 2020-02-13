@@ -102,15 +102,15 @@ typedef struct hd44780_state {
     uint8_t cursor_type; // 0 - no
     QemuConsole *con;
     uint8_t invalidate;
-    unsigned char ddram[ROWS_DDRAM][COLUMNS_DDRAM];
+    uint8_t ddram[ROWS_DDRAM][COLUMNS_DDRAM];
     QEMUTimer* timer_blink;
     uint8_t columns;
     uint8_t rows;
     uint16_t width;
     uint16_t height;
 
-    unsigned char CGRAM[8][8];
-    unsigned char CGROM[SIZE_CGROM][HEIGHT_CHAR];
+    uint8_t CGRAM[8][8];
+    uint8_t CGROM[SIZE_CGROM][HEIGHT_CHAR];
 } hd44780_state;
 
 const unsigned char Symbols[SIZE_CGROM][HEIGHT_CHAR] = {
@@ -650,13 +650,13 @@ static void hd44780_led_update_display(void *opaque)
 
     for(int j=0; j<2; j++) {
         for(int i=0; i<=0x27; i++) {
-            DB_PRINT("%i",s->ddram[j][i]);
+            DB_PRINT("%i", s->ddram[j][i]);
         }
         DB_PRINT("\n");
     }
     for(int i=0; i<8; i++) {
         for(int j=0; j<8; j++) {
-            DB_PRINT("0x%x ", s->CGRAM[i][j]);
+            DB_PRINT("0x%x", s->CGRAM[i][j]);
         }
         DB_PRINT("\n");
     }
@@ -739,6 +739,42 @@ static void hd44780_initfn(Object *obj)
                         NULL, NULL, NULL);
 }
 
+static const VMStateDescription vmstate_hd44780 = {
+    .name = "hd44780_lcd",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_I2C_SLAVE(parent_obj, hd44780_state),
+
+        VMSTATE_BOOL(bit_mode_4, hd44780_state),
+        VMSTATE_BOOL(active_autoscroll, hd44780_state),
+        VMSTATE_BOOL(id, hd44780_state),
+        VMSTATE_BOOL(receive_custom_char, hd44780_state),
+
+        VMSTATE_INT8(pos, hd44780_state),
+        VMSTATE_INT8(offset, hd44780_state),
+
+        VMSTATE_UINT8(custom_pos, hd44780_state),
+        VMSTATE_UINT8(total_char, hd44780_state),
+        VMSTATE_UINT8(full_data, hd44780_state),
+        VMSTATE_UINT8(counter_mode, hd44780_state),
+        VMSTATE_UINT8(counter, hd44780_state),
+        VMSTATE_UINT8(cursor_pos, hd44780_state),
+        VMSTATE_UINT8(cursor_type, hd44780_state),
+        VMSTATE_UINT8(columns, hd44780_state),
+        VMSTATE_UINT8(rows, hd44780_state),
+
+        VMSTATE_UINT16(width, hd44780_state),
+        VMSTATE_UINT16(height, hd44780_state),
+
+        VMSTATE_UINT8_2DARRAY(ddram, hd44780_state, ROWS_DDRAM, COLUMNS_DDRAM),
+        VMSTATE_UINT8_2DARRAY(CGRAM, hd44780_state, 8, 8),
+        VMSTATE_UINT8_2DARRAY(CGROM, hd44780_state, SIZE_CGROM, HEIGHT_CHAR),
+
+        VMSTATE_END_OF_LIST()
+    }
+};
+
 static void hd44780_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
@@ -748,6 +784,7 @@ static void hd44780_class_init(ObjectClass *klass, void *data)
     //sc->event   = hd44780_event;
     dc->realize = hd44780_realize;
     dc->reset   = hd44780_reset;
+    dc->vmsd    = &vmstate_hd44780;
     //dc->props   = hd44780_properties;
 }
 

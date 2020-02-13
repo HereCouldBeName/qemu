@@ -118,15 +118,16 @@ static const VMStateDescription atmega8_twi_vmstate = {
     .name = "avr_twi",
     .version_id = 1,
     .minimum_version_id = 1,
-    /*.fields = (VMStateField[]) {
-        VMSTATE_UINT8(i2ccon, Exynos4210I2CState),
-        VMSTATE_UINT8(i2cstat, Exynos4210I2CState),
-        VMSTATE_UINT8(i2cds, Exynos4210I2CState),
-        VMSTATE_UINT8(i2cadd, Exynos4210I2CState),
-        VMSTATE_UINT8(i2clc, Exynos4210I2CState),
-        VMSTATE_BOOL(scl_free, Exynos4210I2CState),
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT8(twbr, Atmega8TWIState),
+        VMSTATE_UINT8(twcr, Atmega8TWIState),
+        VMSTATE_UINT8(twdr, Atmega8TWIState),
+
+        VMSTATE_BOOL(scl_free, Atmega8TWIState),
+        VMSTATE_BOOL(start, Atmega8TWIState),
+        VMSTATE_BOOL(sending, Atmega8TWIState),
         VMSTATE_END_OF_LIST()
-    }*/
+    }
 };
 
 static void atmega8_twi_reset(DeviceState *d)
