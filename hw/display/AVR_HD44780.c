@@ -66,9 +66,6 @@
 #define SIZE_CGROM 128
 #define HEIGHT_CHAR 8
 
-#define SET_HEIGHT_SCREEN(rows) s->height = SCALE * 10 * rows + 2 * (SCALE * 2)
-#define SET_WIDTH_SCREEN(columns) s->width = SCALE * (LEN + 1) * columns + 2 * (SCALE * 2)
-
 typedef struct hd44780_state {
     I2CSlave parent_obj;
 
@@ -106,8 +103,6 @@ typedef struct hd44780_state {
     QEMUTimer* timer_blink;
     uint8_t columns;
     uint8_t rows;
-    uint16_t width;
-    uint16_t height;
 
     uint8_t CGRAM[8][8];
     uint8_t CGROM[SIZE_CGROM][HEIGHT_CHAR];
@@ -546,6 +541,14 @@ static int hd44780_send(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
+static uint16_t get_width(uint8_t columns) {
+    return SCALE * (LEN + 1) * columns + 2 * (SCALE * 2);
+}
+
+static uint16_t get_height(uint8_t rows) {
+    return SCALE * 9 * rows + 2 * (SCALE * 2);
+}
+
 static void hd44780_reset(DeviceState *dev)
 {
     hd44780_state *s = HD44780(dev);
@@ -648,14 +651,14 @@ static void hd44780_led_update_display(void *opaque)
         return;
     }
 
-    for(int j=0; j<2; j++) {
-        for(int i=0; i<=0x27; i++) {
+    for (int j=0; j<2; j++) {
+        for (int i=0; i<=0x27; i++) {
             DB_PRINT("%i", s->ddram[j][i]);
         }
         DB_PRINT("\n");
     }
-    for(int i=0; i<8; i++) {
-        for(int j=0; j<8; j++) {
+    for (int i=0; i<8; i++) {
+        for (int j=0; j<8; j++) {
             DB_PRINT("0x%x", s->CGRAM[i][j]);
         }
         DB_PRINT("\n");
@@ -675,8 +678,8 @@ static void hd44780_led_update_display(void *opaque)
         }
     }
 
-    DB_PRINT("s->width = %u , s->height = %u, s->offset = %u", s->width, s->height, s->offset);
-    dpy_gfx_update(s->con, 0, 0, s->width, s->height);
+    DB_PRINT("s->width = %u , s->height = %u, s->offset = %u", get_width(s->columns), get_height(s->rows), s->offset);
+    dpy_gfx_update(s->con, 0, 0, get_width(s->columns), get_height(s->rows));
     s->invalidate = 0;
 }
 
@@ -690,8 +693,6 @@ static void hd44780_realize(DeviceState *dev, Error **errp)
     hd44780_state *s = HD44780(dev);
     s->columns = 8;
     s->rows    = 1;
-    SET_WIDTH_SCREEN(8);
-    SET_HEIGHT_SCREEN(1);
     s->con = graphic_console_init(dev, 0, &hd44780_led_ops, s);
     memcpy(s->CGROM, Symbols, SIZE_CGROM * HEIGHT_CHAR);
 }
@@ -708,9 +709,8 @@ static void hd44780_set_columns(Object *obj, Visitor *v, const char *name,
 //        error_propagate(errp, local_err);
 //        return;
 //    }
-    SET_WIDTH_SCREEN(columns);
     s->columns = columns;
-    qemu_console_resize(s->con, s->width, s->height);
+    qemu_console_resize(s->con, get_width(s->columns), get_height(s->rows));
 }
 static void hd44780_set_rows(Object *obj, Visitor *v, const char *name,
                                    void *opaque, Error **errp)
@@ -724,9 +724,8 @@ static void hd44780_set_rows(Object *obj, Visitor *v, const char *name,
 //        error_propagate(errp, local_err);
 //        return;
 //    }
-    SET_HEIGHT_SCREEN(rows);
     s->rows = rows;
-    qemu_console_resize(s->con, s->width, s->height);
+    qemu_console_resize(s->con, get_width(s->columns), get_height(s->rows));
 }
 
 static void hd44780_initfn(Object *obj)
@@ -761,11 +760,6 @@ static const VMStateDescription vmstate_hd44780 = {
         VMSTATE_UINT8(counter, hd44780_state),
         VMSTATE_UINT8(cursor_pos, hd44780_state),
         VMSTATE_UINT8(cursor_type, hd44780_state),
-        VMSTATE_UINT8(columns, hd44780_state),
-        VMSTATE_UINT8(rows, hd44780_state),
-
-        VMSTATE_UINT16(width, hd44780_state),
-        VMSTATE_UINT16(height, hd44780_state),
 
         VMSTATE_UINT8_2DARRAY(ddram, hd44780_state, ROWS_DDRAM, COLUMNS_DDRAM),
         VMSTATE_UINT8_2DARRAY(CGRAM, hd44780_state, 8, 8),
