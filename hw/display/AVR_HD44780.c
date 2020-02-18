@@ -650,15 +650,14 @@ static void hd44780_led_update_display(void *opaque)
     if (!surface_bits_per_pixel(surface)) {
         return;
     }
-
-    for (int j=0; j<2; j++) {
-        for (int i=0; i<=0x27; i++) {
+    for (int j=0 ; j<2 ; j++) {
+        for (int i=0 ; i<=0x27 ; i++) {
             DB_PRINT("%i", s->ddram[j][i]);
         }
         DB_PRINT("\n");
     }
-    for (int i=0; i<8; i++) {
-        for (int j=0; j<8; j++) {
+    for (int i=0 ; i<8 ; i++) {
+        for (int j=0 ; j<8 ; j++) {
             DB_PRINT("0x%x", s->CGRAM[i][j]);
         }
         DB_PRINT("\n");
@@ -672,7 +671,7 @@ static void hd44780_led_update_display(void *opaque)
         hd44780_led_printf_str(&src, &surface, 0, s->columns, 0, 0, 0, s);
         hd44780_led_printf_str(&src, &surface, 0, s->columns, 1, 0, 1, s);
     } else if (s->rows == 4) {
-        for (int i=0;i<2;i++) {
+        for (int i=0 ; i<2 ; i++) {
             hd44780_led_printf_str(&src, &surface, 0, s->columns, i, 0, i, s);
             hd44780_led_printf_str(&src, &surface, s->columns, s->columns, i, 0, 2+i, s);
         }
