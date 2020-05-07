@@ -54,9 +54,13 @@
 #include "migration/snapshot.h"
 #include "migration/misc.h"
 
+#include "migration/device_register_inf.h"
+
 #ifdef CONFIG_SPICE
 #include <spice/enums.h>
 #endif
+
+CurrPosDebug* cpd;
 
 static void hmp_handle_error(Monitor *mon, Error **errp)
 {
@@ -1379,6 +1383,36 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
     save_snapshot(qdict_get_try_str(qdict, "name"), &err);
     hmp_handle_error(mon, &err);
 }
+
+
+
+void hmp_peripherals(Monitor *mon, const QDict *qdict)
+{
+    find_device((fprintf_function)monitor_printf, mon);
+}
+
+
+void hmp_per_reg(Monitor *mon, const QDict *qdict)
+{
+    if(!cpd) {
+        cpd = malloc(sizeof(CurrPosDebug));
+        cpd->field = NULL;
+        cpd->opaque = NULL;
+        cpd->prev = NULL;
+        cpd->vmsd = NULL;
+    }
+    const char *name = qdict_get_str(qdict, "name");
+    if(!strcmp(name,"..")) {
+        if(cpd->prev) {
+            cpd = cpd->prev;
+        }
+        return;
+    }
+    cpd = test_reg((fprintf_function)monitor_printf, mon, name, cpd);
+    monitor_printf(mon, "test: %s\n",cpd->vmsd->name);
+}
+
+
 
 void hmp_delvm(Monitor *mon, const QDict *qdict)
 {

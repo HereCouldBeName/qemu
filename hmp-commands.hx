@@ -380,6 +380,44 @@ Set the whole virtual machine to the snapshot identified by the tag
 @var{tag} or the unique snapshot ID @var{id}.
 ETEXI
 
+
+
+
+
+
+{
+		.name       = "peripherals",
+		.args_type  = "",
+		.params     = "",
+		.help       = "shows a list of available peripherals.",
+		.cmd        = hmp_peripherals,
+	},
+
+STEXI
+@item peripherals
+@findex peripherals
+Shows a list of available peripherals.
+ETEXI
+
+
+{
+		.name       = "per_reg",
+		.args_type  = "name:s",
+		.params     = "name",
+		.help       = "shows a list of available peripherals.",
+		.cmd        = hmp_per_reg,
+	},
+
+STEXI
+@item per_reg @var{name}
+@findex per_reg
+Shows a registers of peripheral @var{name}.
+ETEXI
+
+
+
+
+
     {
         .name       = "delvm",
         .args_type  = "name:s",

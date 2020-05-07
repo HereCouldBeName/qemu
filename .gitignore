@@ -212,3 +212,18 @@ trace-dtrace-root.dtrace
 trace-ust-all.h
 trace-ust-all.c
 /target/arm/decode-sve.inc.c
+/build
+.vscode/settings.json
+hw/avr/Atmega328_soc.c
+hw/avr/Atmega328.c
+hw/char/usart_atmega328.c
+hw/display/AVR_HD44780 (9.01.20).c
+hw/display/AVR_HD44780 (Вроде для 16x2 всё ОК).c
+hw/display/AVR_HD44780 (не оптимизированно).c
+hw/display/AVR_HD44780 (LAST VERSION).c
+hw/display/AVR_HD44780.c
+hw/display/AVR_HD44780.c
+hw/display/HD44780_template (не оптимизированно).h
+include/hw/avr/atmega328_soc.h
+include/hw/char/usart_atmega328.h
+hw/display/AVR_HD44780.c
