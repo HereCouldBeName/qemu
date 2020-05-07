@@ -333,7 +333,8 @@ static int per_get_index_mas(const char* name, const char* parent_name) {
         if(name[i] != '[') {
             feild_name[i] += name[i];
         } else {
-            if(strlen(parent_name) != i || strcmp(parent_name,feild_name)) {
+            if(strlen(parent_name) != i || strcmp(parent_name,feild_name)
+             || name[size-1] != ']') {
                 return -1;
             }
             ind = 0;
@@ -412,8 +413,8 @@ static void* per_printf_arr_pointer(bool option, fprintf_function func_fprintf, 
     return opaque;
 }
 
-static void per_printf_int8(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_int8(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -421,17 +422,19 @@ static void per_printf_int8(bool option, fprintf_function func_fprintf, void *f,
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array int8_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque); 
         } else {
            func_fprintf(f, "- <Array int8_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <int8_t> %s %i\n", field->name, *(int8_t *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_bool(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_bool(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -439,17 +442,19 @@ static void per_printf_bool(bool option, fprintf_function func_fprintf, void *f,
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array bool el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque); 
         } else {
            func_fprintf(f, "- <Array bool> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <bool> %s %i\n", field->name, *(bool *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_int16(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_int16(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -457,17 +462,19 @@ static void per_printf_int16(bool option, fprintf_function func_fprintf, void *f
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array int16_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
            func_fprintf(f, "- <Array int16_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <int16_t> %s %i\n", field->name, *(int16_t *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_int32(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_int32(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -475,26 +482,29 @@ static void per_printf_int32(bool option, fprintf_function func_fprintf, void *f
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array int32_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
            func_fprintf(f, "- <Array int32_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <int32_t> %s %i\n", field->name, *(int32_t *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_int32_equal(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {   
+static CurrPosDebug* per_printf_int32_equal(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {   
     if (field->err_hint) {
         func_fprintf(f, "- <int32_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        per_printf_int32(option,func_fprintf, f, opaque, field);
+        cpd = per_printf_int32(option,func_fprintf, f, opaque, field, cpd);
     }
+    return cpd;
 }
 
-static void per_printf_int64(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_int64(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -502,13 +512,15 @@ static void per_printf_int64(bool option, fprintf_function func_fprintf, void *f
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array int64_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
            func_fprintf(f, "- <Array int64_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <int64_t> %s %li\n", field->name, *(int64_t *)opaque);
     }
+    return cpd;
 }
 
 static CurrPosDebug* per_printf_uint8(bool option, fprintf_function func_fprintf, void *f,
@@ -526,9 +538,6 @@ static CurrPosDebug* per_printf_uint8(bool option, fprintf_function func_fprintf
            func_fprintf(f, "- <Array uint8_t> %s\n", field->name); 
         }
     } else {
-        if(option) {
-            cpd = step_up(cpd, cpd->vmsd, field, opaque);
-        }
         func_fprintf(f, "- <uint8_t> %s %i\n", field->name, *(uint8_t *)opaque);
     }
     return cpd;
@@ -539,13 +548,13 @@ static CurrPosDebug* per_printf_uint8_equal(bool option, fprintf_function func_f
     if (field->err_hint) {
         func_fprintf(f, "- <uint8_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        per_printf_uint8(option,func_fprintf, f, opaque, field, cpd);
+        cpd = per_printf_uint8(option,func_fprintf, f, opaque, field, cpd);
     }
     return cpd;
 }
 
-static void per_printf_uint16(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_uint16(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -553,28 +562,29 @@ static void per_printf_uint16(bool option, fprintf_function func_fprintf, void *
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array uint16_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque); 
         } else {
            func_fprintf(f, "- <Array uint16_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <uint16_t> %s %i\n", field->name, *(uint16_t *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_uint16_equal(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {    
+static CurrPosDebug* per_printf_uint16_equal(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint16_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        per_printf_uint16(option,func_fprintf, f, opaque, field);
+        cpd = per_printf_uint16(option,func_fprintf, f, opaque, field, cpd);
     }
+    return cpd;
 }
 
 static CurrPosDebug* per_printf_uint32(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd) {
-    
-    const VMStateDescription *vmsd = cpd->vmsd;
     int n_elems = vmstate_n_elems(opaque, field);
     
     if(n_elems > 1) {
@@ -582,7 +592,7 @@ static CurrPosDebug* per_printf_uint32(bool option, fprintf_function func_fprint
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array uint32_t el> %s[%i]\n", field->name, i);
             }
-            cpd = step_up(cpd, vmsd, field, opaque);
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);
         } else {
            func_fprintf(f, "- <Array uint32_t> %s\n", field->name); 
         }
@@ -597,13 +607,13 @@ static CurrPosDebug* per_printf_uint32_equal(bool option, fprintf_function func_
     if (field->err_hint) {
         func_fprintf(f, "- <uint32_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        per_printf_uint32(option,func_fprintf, f, opaque, field, cpd);
+        cpd = per_printf_uint32(option,func_fprintf, f, opaque, field, cpd);
     }
     return cpd;
 }
 
-static void per_printf_uint64(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_uint64(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -611,26 +621,29 @@ static void per_printf_uint64(bool option, fprintf_function func_fprintf, void *
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array uint64_t el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque); 
         } else {
            func_fprintf(f, "- <Array uint64_t> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <uint64_t> %s %li\n", field->name, *(uint64_t *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_uint64_equal(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {    
+static CurrPosDebug* per_printf_uint64_equal(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint64_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        per_printf_uint64(option,func_fprintf, f, opaque, field);
+        cpd = per_printf_uint64(option,func_fprintf, f, opaque, field, cpd);
     }
+    return cpd;
 }
 
-static void per_printf_float64(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_float64(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -638,17 +651,19 @@ static void per_printf_float64(bool option, fprintf_function func_fprintf, void 
         if(option) {
            for(int i=0; i<n_elems; i++) {
                 func_fprintf(f, "- <Array float64 el> %s[%i]\n", field->name, i);
-            } 
+            }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
            func_fprintf(f, "- <Array float64> %s\n", field->name); 
         }
     } else {
         func_fprintf(f, "- <float64> %s %li\n", field->name, *(float64 *)opaque);
     }
+    return cpd;
 }
 
-static void per_printf_CPU_Double_U(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_CPU_Double_U(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -657,6 +672,7 @@ static void per_printf_CPU_Double_U(bool option, fprintf_function func_fprintf, 
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array CPU_DoubleU el> %s[%i]\n", field->name, i);
             }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
             CPU_DoubleU elem = *(CPU_DoubleU *)opaque;
             func_fprintf(f,"- <CPU_DoubleU> ld: %ld, lower: %i, upper: %i, ll: %li\n",
@@ -669,10 +685,11 @@ static void per_printf_CPU_Double_U(bool option, fprintf_function func_fprintf, 
             func_fprintf(f, "- <CPU_DoubleU> %s\n", field->name); 
         }
     }
+    return cpd;
 }
 
-static void per_printf_timer(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_timer(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -681,6 +698,7 @@ static void per_printf_timer(bool option, fprintf_function func_fprintf, void *f
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array QEMUTimer el> %s[%i]\n", field->name, i);
             }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);  
         } else {
             QEMUTimer elem = *(QEMUTimer *)opaque;
             func_fprintf(f, "- <QEMUTimer> expire_time: %li, opaque: %p, scale: %i\n",
@@ -693,10 +711,11 @@ static void per_printf_timer(bool option, fprintf_function func_fprintf, void *f
             func_fprintf(f, "- <QEMUTimer> %s\n", field->name); 
         }
     }
+    return cpd;
 }
 
-static void per_printf_buffer(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -705,6 +724,7 @@ static void per_printf_buffer(bool option, fprintf_function func_fprintf, void *
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array uint8_t buffer el> %s[%i]\n", field->name, i);
             }
+            cpd = step_up(cpd, cpd->vmsd, field, opaque);
         } else {
             uint8_t *buf = (uint8_t *)opaque;
             func_fprintf(f,"- <uint8_t buffer> %s: \n",field->name);
@@ -720,6 +740,7 @@ static void per_printf_buffer(bool option, fprintf_function func_fprintf, void *
             func_fprintf(f, "- <uint8_t buffer> %s\n", field->name); 
         }
     }
+    return cpd;
 }
 
 
@@ -752,7 +773,8 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
         if(cpd->field) {
             ind = per_get_index_mas(name,cpd->field->name);
         }
-        if(ind != -1) {
+        int n_elems = vmstate_n_elems(opaque, field);
+        if(ind != -1 && ind < n_elems) {
             /*
                 *go to need index
             */
@@ -784,7 +806,15 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                 } else if (!strcmp(field->info->name, "uint16") ||
                         !strcmp(field->info->name, "uint16 equal")) {
                     func_fprintf(f, "- <uint16_t> %s %i\n", name, *(uint16_t *)opaque);
-                } 
+                } else if (!strcmp(field->info->name, "uint32") ||
+                        !strcmp(field->info->name, "uint32 equal")) {
+                    func_fprintf(f, "- <uint32_t> %s %i\n", name, *(uint32_t *)opaque);
+                } else if (!strcmp(field->info->name, "uint64") ||
+                        !strcmp(field->info->name, "uint64 equal")) {
+                    func_fprintf(f, "- <uint64_t> %s %li\n", name, *(uint64_t *)opaque);
+                } else if (!strcmp(field->info->name, "float64")) {
+                    func_fprintf(f, "- <float64> %s %li\n", name, *(int64_t *)opaque);
+                }
                 return cpd;
             }
             name = NULL;
@@ -817,43 +847,43 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                                 f, field, curr_elem, cpd);
         } else {
             if (!strcmp(field->info->name,"int8")) {
-                per_printf_int8(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_int8(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"bool")) {
-                per_printf_bool(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_bool(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"int16")) {
-                per_printf_int16(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_int16(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"int32") ||
                        !strcmp(field->info->name,"int32 le")) {
-                per_printf_int32(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_int32(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"int32 equal")) {
-                per_printf_int32_equal(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_int32_equal(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"int64")) {
-                per_printf_int64(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_int64(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint8")) {
                 cpd = per_printf_uint8(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"uint8 equal")) {
                 cpd = per_printf_uint8_equal(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint16")) {
-                per_printf_uint16(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_uint16(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint16 equal")) {
-                per_printf_uint16_equal(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_uint16_equal(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint32")) {
                 cpd = per_printf_uint32(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint32 equal")) {
                 cpd = per_printf_uint32_equal(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"uint64")) {
-                per_printf_uint64(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_uint64(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"uint64 equal")) {
-                per_printf_uint64_equal(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_uint64_equal(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"float64")) {
-                per_printf_float64(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_float64(option,func_fprintf, f, curr_elem, field, cpd);
             } else if (!strcmp(field->info->name,"CPU_Double_U")) {
-                per_printf_CPU_Double_U(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_CPU_Double_U(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"timer")) {
-                per_printf_timer(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_timer(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"buffer") ||
                       !strcmp(field->info->name,"unused_buffer")) {
-                per_printf_buffer(option,func_fprintf, f, curr_elem, field);
+                cpd = per_printf_buffer(option,func_fprintf, f, curr_elem, field, cpd);
             } else if(!strcmp(field->info->name,"bitmap")) {
                 func_fprintf(f,"- <bitmap> %s\n",field->name);
             } else if(!strcmp(field->info->name,"qtailq")) {
