@@ -826,7 +826,7 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
         }
         
         /*search field with name*/
-        if(name && strcmp(field->name,name)) {
+        if(option && strcmp(field->name,name)) {
             field++;
             continue;
         }

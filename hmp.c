@@ -55,6 +55,7 @@
 #include "migration/misc.h"
 
 #include "migration/device_register_inf.h"
+#include "migration/per_reg_data.h"  //Переделать инклуд, убрав vsmd_data1 в инклуд выше.
 
 #ifdef CONFIG_SPICE
 #include <spice/enums.h>
@@ -1388,7 +1389,15 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
 
 void hmp_peripherals(Monitor *mon, const QDict *qdict)
 {
-    find_device((fprintf_function)monitor_printf, mon);
+    if(!cpd) {
+        find_device((fprintf_function)monitor_printf, mon);
+    } else {
+        if(cpd->field) {
+            vmsd_data_1((fprintf_function)monitor_printf,mon,cpd->field->name,cpd);
+        } else {
+            vmsd_data_1((fprintf_function)monitor_printf,mon,NULL,cpd);
+        }
+    }
 }
 
 

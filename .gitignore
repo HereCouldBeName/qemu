@@ -227,3 +227,4 @@ hw/display/HD44780_template (не оптимизированно).h
 include/hw/avr/atmega328_soc.h
 include/hw/char/usart_atmega328.h
 hw/display/AVR_HD44780.c
+hw/display/AVR_HD44780.c
