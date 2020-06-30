@@ -22,6 +22,7 @@ typedef struct {
 
 
 typedef struct CurrPosDebug {
+    const char* name;
     const VMStateDescription * vmsd;
     VMStateField* field;
     void* opaque;

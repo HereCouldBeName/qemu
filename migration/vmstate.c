@@ -319,16 +319,28 @@ static CurrPosDebug* step_up(CurrPosDebug* cpd, const VMStateDescription *vmsd, 
     return tmp;
 }
 
-// CurrPosDebug* per_printf_struct(fprintf_function func_fprintf, void *f,char* text, char* name, int index) {
-//     if
-// }
+static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f){
+    if(!cpd->prev) {
+        func_fprintf(f, "path: %s/\n",cpd->name);
+        return;
+    }
+    print_path(cpd->prev, func_fprintf, f);
+    func_fprintf(f, "%s/\n",cpd->name);
+    return;
+}
+
+/*
+    Function search index in the entered string
+    name - user input string
+    parent_name - name field
+*/
 
 static int per_get_index_mas(const char* name, const char* parent_name) {
     int ind = -1;
     int size = strlen(name);
     char feild_name[size];
     memset(feild_name,0x0,size);
-    
+
     for(int i=0; i<size; i++) {
         if(name[i] != '[') {
             feild_name[i] += name[i];
@@ -756,6 +768,13 @@ static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprint
 
 CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
     
+    /*Печать пути!!*/
+    print_path(cpd,func_fprintf,f);
+    func_fprintf(f, "\n");
+
+    //cpd->name = name;
+    //func_fprintf(f, "name: %s\n",cpd->name);
+
     //CurrPosDebug* tmp = create_new_cpd(cpd);
 
     const VMStateDescription *vmsd = cpd->vmsd;
@@ -770,11 +789,15 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
     
     if(name) {
         int ind = -1;
-        if(cpd->field) {
-            ind = per_get_index_mas(name,cpd->field->name);
-        }
         int n_elems = vmstate_n_elems(opaque, field);
-        if(ind != -1 && ind < n_elems) {
+        if(cpd->field && n_elems > 1) {
+            ind = per_get_index_mas(name,cpd->field->name);
+            if(ind < 0 || ind >= n_elems) {
+                func_fprintf(f, "Invalid index received\n");
+                return cpd;
+            }
+        }
+        if(ind != -1) {
             /*
                 *go to need index
             */
@@ -820,8 +843,10 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
             name = NULL;
         }
     }
+
     while (field->name != NULL) {
         if(name) {
+            cpd->name = name;
             option = true;
         }
         

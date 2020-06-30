@@ -2560,16 +2560,17 @@ void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up) 
     func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
 }
 
-static CurrPosDebug* step_up(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque) {
-    CurrPosDebug* tmp;
-    tmp = malloc(sizeof(CurrPosDebug));
-    tmp->field = field;
-    tmp->opaque = opaque;
-    tmp->vmsd = vmsd;
-    tmp->prev = NULL;
-    return tmp;
-}
+// static CurrPosDebug* step_up(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
+//                             void* opaque) {
+//     CurrPosDebug* tmp;
+//     tmp = malloc(sizeof(CurrPosDebug));
+//     tmp->field = field;
+//     tmp->opaque = opaque;
+//     tmp->vmsd = vmsd;
+//     tmp->prev = NULL;
+//     tmp->name 
+//     return tmp;
+// }
 
 
 CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
@@ -2580,7 +2581,9 @@ CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name,
     } else {
         QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
             if(!strcmp(se->idstr,name)) {
-                cpd = step_up(cpd,se->vmsd,NULL,se->opaque);
+                //cpd = step_up(cpd,se->vmsd,NULL,se->opaque);
+                cpd->opaque = se->opaque;
+                cpd->vmsd = se->vmsd;
                 cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
                 return cpd;
             }

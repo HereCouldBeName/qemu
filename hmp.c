@@ -1409,6 +1409,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         cpd->opaque = NULL;
         cpd->prev = NULL;
         cpd->vmsd = NULL;
+        cpd->name = NULL;
     }
     const char *name = qdict_get_str(qdict, "name");
     if(!strcmp(name,"..")) {
@@ -1417,6 +1418,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         }
         return;
     }
+    cpd->name = name;
     cpd = test_reg((fprintf_function)monitor_printf, mon, name, cpd);
     monitor_printf(mon, "test: %s\n",cpd->vmsd->name);
 }
