@@ -1389,7 +1389,7 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
 
 void hmp_peripherals(Monitor *mon, const QDict *qdict)
 {
-    if(!cpd) {
+    if(!cpd || !cpd->opaque) {
         find_device((fprintf_function)monitor_printf, mon);
     } else {
         if(cpd->field) {
@@ -1407,20 +1407,18 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         cpd = malloc(sizeof(CurrPosDebug));
         cpd->field = NULL;
         cpd->opaque = NULL;
-        cpd->prev = NULL;
+        cpd->last = NULL;
         cpd->vmsd = NULL;
         cpd->name = NULL;
     }
     const char *name = qdict_get_str(qdict, "name");
     if(!strcmp(name,"..")) {
-        if(cpd->prev) {
-            cpd = cpd->prev;
+        if(cpd->last) {
+            cpd = cpd->last;
         }
         return;
     }
-    cpd->name = name;
     cpd = test_reg((fprintf_function)monitor_printf, mon, name, cpd);
-    monitor_printf(mon, "test: %s\n",cpd->vmsd->name);
 }
 
 

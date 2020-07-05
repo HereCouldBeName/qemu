@@ -2545,31 +2545,19 @@ void show_reg_peref(fprintf_function func_fprintf, void *f, const char* name) {
         func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");
     }
 }
-/*Удалять, если введено не правильно, возможно нужен bool для возврата функции*/
-void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up) {
-    SaveStateEntry* se;
-    char* device_name = up->steps[0];
-    QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
-        if(!strcmp(se->idstr,device_name)) {
-            func_fprintf(f,"Curr: %s",device_name);
-            //vmsd_data_1(func_fprintf,f,se->vmsd, se->opaque, up, 1);
-            return;
-        }
-    }
-    func_fprintf(f, "<ERROR>Device named '%s' was not found.\n",device_name);
-    func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
-}
-
-// static CurrPosDebug* step_up(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-//                             void* opaque) {
-//     CurrPosDebug* tmp;
-//     tmp = malloc(sizeof(CurrPosDebug));
-//     tmp->field = field;
-//     tmp->opaque = opaque;
-//     tmp->vmsd = vmsd;
-//     tmp->prev = NULL;
-//     tmp->name 
-//     return tmp;
+// /*Удалять, если введено не правильно, возможно нужен bool для возврата функции*/
+// void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up) {
+//     SaveStateEntry* se;
+//     char* device_name = up->steps[0];
+//     QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
+//         if(!strcmp(se->idstr,device_name)) {
+//             func_fprintf(f,"Curr: %s",device_name);
+//             //vmsd_data_1(func_fprintf,f,se->vmsd, se->opaque, up, 1);
+//             return;
+//         }
+//     }
+//     func_fprintf(f, "<ERROR>Device named '%s' was not found.\n",device_name);
+//     func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
 // }
 
 
@@ -2580,16 +2568,15 @@ CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name,
         return cpd;
     } else {
         QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
-            if(!strcmp(se->idstr,name)) {
-                //cpd = step_up(cpd,se->vmsd,NULL,se->opaque);
-                cpd->opaque = se->opaque;
-                cpd->vmsd = se->vmsd;
+            if(!strcmp(se->idstr, name)) {
+                cpd = create_next_cpd(cpd, se->vmsd, NULL, se->opaque, name);
+                func_fprintf(f, "Name: '%s' \n", cpd->name);
                 cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
                 return cpd;
             }
         }
     }
-    func_fprintf(f, "<ERROR>Device named '%s' was not found.\n",name);
+    func_fprintf(f, "<ERROR>Device named '%s' was not found.\n", name);
     func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
     return cpd;
 }

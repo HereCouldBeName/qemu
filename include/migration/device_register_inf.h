@@ -14,6 +14,6 @@
 
 void find_device(fprintf_function func_fprintf, void *f);
 void show_reg_peref(fprintf_function func_fprintf, void *f, const char* name);
-void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up);
+//void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up);
 CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
 #endif

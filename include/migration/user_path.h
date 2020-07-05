@@ -10,25 +10,18 @@
 #ifndef QEMU_USER_PATH_H
 #define QEMU_USER_PATH_H
 
-typedef struct {
-    int ind;
-        /*
-        test value:
-        500 - steps max
-        30 - max len one field
-    */
-    char* steps[500];
-} UserPath;
-
+#include "qemu/osdep.h"
+#include "migration/migration.h"
 
 typedef struct CurrPosDebug {
-    const char* name;
+    char* name;
     const VMStateDescription * vmsd;
     VMStateField* field;
     void* opaque;
-    struct CurrPosDebug* prev;
+    struct CurrPosDebug* last;
 } CurrPosDebug;
 
-
+CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
+                            void* opaque, const char* name);
 
 #endif
