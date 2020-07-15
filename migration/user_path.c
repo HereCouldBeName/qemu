@@ -21,17 +21,25 @@
 
 CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
                             void* opaque, const char* name) {
+    
+    if(cpd->next && !strcmp(cpd->next->name, name)) {
+        return cpd->next;
+    }
+
     CurrPosDebug* tmp;
     tmp = malloc(sizeof(CurrPosDebug));
     tmp->field = field;
     tmp->opaque = opaque;
     tmp->vmsd = vmsd;
     tmp->last = cpd;
-    
+    tmp->next = NULL;
+
     size_t len = strlen(name);
     tmp->name = malloc((len + 1) * sizeof(const char));
     memcpy(tmp->name,name,len * sizeof(const char));
     tmp->name[len] = '\0';
+
+    cpd->next = tmp;
 
     return tmp;
 }

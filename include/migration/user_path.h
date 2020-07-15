@@ -19,6 +19,7 @@ typedef struct CurrPosDebug {
     VMStateField* field;
     void* opaque;
     struct CurrPosDebug* last;
+    struct CurrPosDebug* next;
 } CurrPosDebug;
 
 CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,

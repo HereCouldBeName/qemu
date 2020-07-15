@@ -1393,7 +1393,7 @@ void hmp_peripherals(Monitor *mon, const QDict *qdict)
         find_device((fprintf_function)monitor_printf, mon);
     } else {
         if(cpd->field) {
-            vmsd_data_1((fprintf_function)monitor_printf,mon,cpd->field->name,cpd);
+            vmsd_data_1((fprintf_function)monitor_printf,mon,cpd->name,cpd->last);
         } else {
             vmsd_data_1((fprintf_function)monitor_printf,mon,NULL,cpd);
         }
@@ -1410,6 +1410,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         cpd->last = NULL;
         cpd->vmsd = NULL;
         cpd->name = NULL;
+        cpd->next = NULL;
     }
     const char *name = qdict_get_str(qdict, "name");
     if(!strcmp(name,"..")) {

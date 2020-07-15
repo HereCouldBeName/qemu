@@ -307,12 +307,12 @@ void vmsd_test(fprintf_function func_fprintf, void *f, const char* name, CurrPos
     func_fprintf(f,"%s %s",name,cpd->field->name);
 }
 
-static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f){
+static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f, const char* name){
     if(!cpd->last) {
         func_fprintf(f, "path: ");
         return;
     }
-    print_path(cpd->last, func_fprintf, f);
+    print_path(cpd->last, func_fprintf, f, name);
     func_fprintf(f, "%s/",cpd->name);
     return;
 }
@@ -763,26 +763,13 @@ static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprint
 }
 
 
-// static CurrPosDebug* create_new_cpd(CurrPosDebug* cpd) {
-//     CurrPosDebug* tmp;
-//     tmp = malloc(sizeof(CurrPosDebug));
-//     tmp->field = cpd->field;
-//     tmp->opaque = cpd->opaque;
-//     tmp->vmsd = cpd->vmsd;
-//     tmp->prev = cpd;
-//     return tmp;
-// }
-
 CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
-    
-    /*Печать пути!!*/
-    print_path(cpd,func_fprintf,f);
+
+    print_path(cpd, func_fprintf, f, name);
+    if(name) {
+        func_fprintf(f, "%s",name);
+    } 
     func_fprintf(f, "\n");
-
-    //cpd->name = name;
-    //func_fprintf(f, "name: %s\n",cpd->name);
-
-    //CurrPosDebug* tmp = create_new_cpd(cpd);
 
     const VMStateDescription *vmsd = cpd->vmsd;
     void *opaque = cpd->opaque;
@@ -816,7 +803,6 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                 if(vmsd->fields) {
                     field = vmsd->fields;
                 }
-                cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
             } else {
                 if (!strcmp(field->info->name, "int8")) {
                     func_fprintf(f, "- <int8_t> %s %i\n", name, *(uint8_t *)opaque);
@@ -845,8 +831,8 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                 } else if (!strcmp(field->info->name, "float64")) {
                     func_fprintf(f, "- <float64> %s %li\n", name, *(int64_t *)opaque);
                 }
-                return cpd;
             }
+            return create_next_cpd(cpd, vmsd, field, opaque, name);
             //name = NULL;
         } else {
             option = true;
