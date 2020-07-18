@@ -763,6 +763,98 @@ static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprint
 }
 
 
+static CurrPosDebug* per_printf_bitmap(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd,
+                            const char* name) {
+    
+    int n_elems = vmstate_n_elems(opaque, field);
+    
+    if(option) {
+        if(n_elems > 1) {
+            for (int i = 0; i < n_elems; i++) {
+                func_fprintf(f, "- <Array bitmap el> %s[%i]\n", field->name, i);
+            }
+            cpd = create_next_cpd(cpd, cpd->vmsd, field, opaque, name);
+        } else {
+            int size = vmstate_size(opaque, field);
+            unsigned long *bmp = (unsigned long *)opaque;
+            int idx = 0;
+            func_fprintf(f,"- <bitmap> %s: \n",field->name);
+            for (int i = 0; i < BITS_TO_U64S(size); i++) {
+                uint64_t w = bmp[idx++];
+                if (sizeof(unsigned long) == 4 && idx < BITS_TO_LONGS(size)) {
+                    w |= ((uint64_t)bmp[idx++]) << 32;
+                }
+                func_fprintf(f,"%li ",w);
+            }
+            func_fprintf(f,"\n");
+        }
+    } else {
+        if(n_elems > 1) {
+            func_fprintf(f, "- <Array uint8_t buffer> %s\n", field->name); 
+        } else {
+            func_fprintf(f, "- <uint8_t buffer> %s\n", field->name); 
+        }
+    }
+    return cpd;
+}
+
+
+static CurrPosDebug* per_printf_str(bool option, fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, CurrPosDebug* cpd, 
+                            const char* name) {
+    
+    int n_elems = vmstate_n_elems(opaque, field);
+    
+    if(n_elems > 1) {
+        if(option) {
+           for(int i=0; i<n_elems; i++) {
+                func_fprintf(f, "- <Array str el> %s[%i]\n", field->name, i);
+            }
+            cpd = create_next_cpd(cpd, cpd->vmsd, field, opaque, name);  
+        } else {
+           func_fprintf(f, "- <Array str> %s\n", field->name); 
+        }
+    } else {
+        func_fprintf(f, "- <str> %s %s\n", field->name, (char *)opaque);
+    }
+    return cpd;
+}
+
+static CurrPosDebug* per_printf_qtailq(bool option, fprintf_function func_fprintf, void *f,
+                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
+                                    const char * name)  {
+    const VMStateDescription *vmsd = cpd->vmsd;
+    int n_elems = vmstate_n_elems(opaque, field);
+
+    if(option) {
+        if(n_elems > 1) {
+            for (int i = 0; i < n_elems; i++) {
+                func_fprintf(f, "- <qtailq el> %s[%i]\n", field->name, i);
+            }
+            cpd = create_next_cpd(cpd, vmsd, field, opaque, name);
+        } else {
+            func_fprintf(f,"-------------qtailq %s start--------------\n", field->name);
+            size_t entry_offset = field->start;
+            void *elm;
+            QTAILQ_RAW_FOREACH(elm, opaque, entry_offset) {
+                vmsd_data(func_fprintf,f, field->vmsd, elm);
+            }
+            cpd = create_next_cpd(cpd, vmsd, field, opaque, name);
+            cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
+            func_fprintf(f,"-------------qtailq %s finish--------------\n", field->name);
+        }
+    } else {
+        if(n_elems > 1) {
+            func_fprintf(f, "- <Array qtailq> %s\n", field->name);
+        } else {
+            func_fprintf(f, "- <qtailq> %s\n", field->name);
+        }
+    }
+    return cpd;                                
+}
+
+
 CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
 
     print_path(cpd, func_fprintf, f, name);
@@ -803,6 +895,7 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                 if(vmsd->fields) {
                     field = vmsd->fields;
                 }
+                cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
             } else {
                 if (!strcmp(field->info->name, "int8")) {
                     func_fprintf(f, "- <int8_t> %s %i\n", name, *(uint8_t *)opaque);
@@ -832,8 +925,7 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                     func_fprintf(f, "- <float64> %s %li\n", name, *(int64_t *)opaque);
                 }
             }
-            return create_next_cpd(cpd, vmsd, field, opaque, name);
-            //name = NULL;
+            return cpd;
         } else {
             option = true;
         }
@@ -923,11 +1015,14 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
                 cpd = per_printf_buffer(option,func_fprintf, f, curr_elem, field,
                                     cpd, name);
             } else if(!strcmp(field->info->name,"bitmap")) {
-                func_fprintf(f,"- <bitmap> %s\n",field->name);
+                cpd = per_printf_bitmap(option,func_fprintf, f, curr_elem, field,
+                                    cpd, name);
             } else if(!strcmp(field->info->name,"qtailq")) {
-                func_fprintf(f,"- <qtailq> %s\n",field->name);
+                cpd = per_printf_qtailq(option,func_fprintf, f, curr_elem, field,
+                                    cpd, name);
             } else if(!strcmp(field->info->name,"str")) {
-                func_fprintf(f,"- <str> %s %s\n",field->name, (char *)curr_elem);
+                cpd = per_printf_str(option,func_fprintf, f, curr_elem, field,
+                                    cpd, name);
             }
         }
         field++;
