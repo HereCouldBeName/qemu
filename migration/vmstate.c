@@ -393,8 +393,6 @@ static void* per_printf_arr_pointer(bool option, fprintf_function func_fprintf, 
                             void* opaque, VMStateField *field) {
     
     int n_elems = vmstate_n_elems(opaque, field);
-    
-    func_fprintf(f, "!!!!!!!!!!!!!!\n");
 
     if(option) {
         if(n_elems > 1) {
@@ -746,9 +744,13 @@ static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprint
             cpd = create_next_cpd(cpd, cpd->vmsd, field, opaque, name);
         } else {
             uint8_t *buf = (uint8_t *)opaque;
-            func_fprintf(f,"- <uint8_t buffer> %s: \n",field->name);
-            for(int i=0; i<field->size; i++) {
-                func_fprintf(f,"%i ",buf[i]);
+            if (field->size < 1) {
+                func_fprintf(f, "- <uint8_t buffer> %s is empty\n", field->name);
+                return cpd;    
+            } 
+            func_fprintf(f, "- <uint8_t buffer> %s: \n", field->name);
+            for(int i = 0; i < field->size; i++) {
+                func_fprintf(f, "%i " ,buf[i]);
             }
             func_fprintf(f,"\n");
         }
@@ -932,10 +934,6 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
     }
 
     while (field->name != NULL) {
-        // if(name) {
-        //     cpd->name = name;
-        //     option = true;
-        // }
         
         /*search field with name*/
         if(option && strcmp(field->name,name)) {
@@ -946,10 +944,19 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
         void *curr_elem = opaque + field->offset;
                 
         if (field->flags & VMS_POINTER) {
-            curr_elem = per_printf_pointer(option,func_fprintf, f, curr_elem, field);
+            curr_elem = per_printf_pointer(option, func_fprintf, f, curr_elem, field);
+            if (!option) {
+                field++;
+                continue;
+            }
         } 
         if (field->flags & VMS_ARRAY_OF_POINTER) {
-            opaque = per_printf_arr_pointer(option,func_fprintf, f, curr_elem, field);
+            curr_elem = per_printf_arr_pointer(option, func_fprintf, f, curr_elem, field);
+            int n_elems = vmstate_n_elems(opaque, field);
+            if (!(option && n_elems == 1)) {
+                field++;
+                continue;
+            }
         } 
         if (field->flags & VMS_STRUCT) {
             cpd = per_printf_struct(option,"Struct", func_fprintf,
