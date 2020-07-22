@@ -66,6 +66,11 @@
 #define SIZE_CGROM 128
 #define HEIGHT_CHAR 8
 
+typedef struct test_str {
+    uint8_t a[3];
+    uint8_t b[3];
+} test_str;
+
 typedef struct hd44780_state {
     I2CSlave parent_obj;
 
@@ -106,6 +111,10 @@ typedef struct hd44780_state {
 
     uint8_t CGRAM[8][8];
     uint8_t CGROM[SIZE_CGROM][HEIGHT_CHAR];
+
+    test_str array2[2][2];
+    uint8_t buffer[10];
+
 } hd44780_state;
 
 const unsigned char Symbols[SIZE_CGROM][HEIGHT_CHAR] = {
@@ -694,6 +703,18 @@ static void hd44780_realize(DeviceState *dev, Error **errp)
     s->rows    = 1;
     s->con = graphic_console_init(dev, 0, &hd44780_led_ops, s);
     memcpy(s->CGROM, Symbols, SIZE_CGROM * HEIGHT_CHAR);
+
+    for(int i=0; i<2; i++) {
+        for(int j=0; j<2; j++) {
+            for(int z=0; z<3; z++) {
+                s->array2[i][j].a[z] = 2*(i+j);
+                s->array2[i][j].b[z] = 3*(i+j);
+            }
+        }
+    }
+    for(int i=0; i<10; i++) {
+        s->buffer[i] = i * 2;
+    }
 }
 
 static void hd44780_set_columns(Object *obj, Visitor *v, const char *name,
@@ -737,6 +758,17 @@ static void hd44780_initfn(Object *obj)
                         NULL, NULL, NULL);
 }
 
+static const VMStateDescription vmstate_test = {
+    .name = "test2d",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT8_ARRAY(a, test_str, 3),
+        VMSTATE_UINT8_ARRAY(b, test_str, 3),
+        VMSTATE_END_OF_LIST()
+    }
+};
+
 static const VMStateDescription vmstate_hd44780 = {
     .name = "hd44780_lcd",
     .version_id = 1,
@@ -763,6 +795,16 @@ static const VMStateDescription vmstate_hd44780 = {
         VMSTATE_UINT8_2DARRAY(ddram, hd44780_state, ROWS_DDRAM, COLUMNS_DDRAM),
         VMSTATE_UINT8_2DARRAY(CGRAM, hd44780_state, 8, 8),
         VMSTATE_UINT8_2DARRAY(CGROM, hd44780_state, SIZE_CGROM, HEIGHT_CHAR),
+
+        VMSTATE_STRUCT_2DARRAY(array2,
+                               hd44780_state,
+                               2,
+                               2,
+                               1,
+                               vmstate_test,
+                               test_str),
+        
+        VMSTATE_BUFFER(buffer, hd44780_state),
 
         VMSTATE_END_OF_LIST()
     }

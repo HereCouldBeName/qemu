@@ -352,9 +352,16 @@ static int per_get_index_mas(const char* name, const char* parent_name) {
 
 static CurrPosDebug* per_printf_struct(bool option, const char* txt, fprintf_function func_fprintf,
                                     void *f, VMStateField *field, void *opaque, CurrPosDebug* cpd,
-                                    const char * name)  {
+                                    const char * name, bool is_mas)  {
     const VMStateDescription *vmsd = cpd->vmsd;
     int n_elems = vmstate_n_elems(opaque, field);
+
+
+    /*Go to struct of array element*/
+    if(is_mas) {
+        option = true;
+        n_elems = 1;
+    }
 
     if(option) {
         if(n_elems > 1) {
@@ -379,7 +386,7 @@ static CurrPosDebug* per_printf_struct(bool option, const char* txt, fprintf_fun
 }
 
 static void* per_printf_pointer(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+                            void* opaque, VMStateField *field, bool is_mas) {
     if(option) {
         opaque = *(void **)opaque;
         assert(opaque);
@@ -390,7 +397,7 @@ static void* per_printf_pointer(bool option, fprintf_function func_fprintf, void
 }
 
 static void* per_printf_arr_pointer(bool option, fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field) {
+                            void* opaque, VMStateField *field, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
 
@@ -414,7 +421,7 @@ static void* per_printf_arr_pointer(bool option, fprintf_function func_fprintf, 
 
 static CurrPosDebug* per_printf_int8(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -435,7 +442,7 @@ static CurrPosDebug* per_printf_int8(bool option, fprintf_function func_fprintf,
 
 static CurrPosDebug* per_printf_bool(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -456,7 +463,7 @@ static CurrPosDebug* per_printf_bool(bool option, fprintf_function func_fprintf,
 
 static CurrPosDebug* per_printf_int16(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -477,7 +484,7 @@ static CurrPosDebug* per_printf_int16(bool option, fprintf_function func_fprintf
 
 static CurrPosDebug* per_printf_int32(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -498,18 +505,18 @@ static CurrPosDebug* per_printf_int32(bool option, fprintf_function func_fprintf
 
 static CurrPosDebug* per_printf_int32_equal(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name) {   
+                            const char* name, bool is_mas) {   
     if (field->err_hint) {
         func_fprintf(f, "- <int32_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        cpd = per_printf_int32(option,func_fprintf, f, opaque, field, cpd, name);
+        cpd = per_printf_int32(option,func_fprintf, f, opaque, field, cpd, name, is_mas);
     }
     return cpd;
 }
 
 static CurrPosDebug* per_printf_int64(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -530,7 +537,7 @@ static CurrPosDebug* per_printf_int64(bool option, fprintf_function func_fprintf
 
 static CurrPosDebug* per_printf_uint8(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -551,18 +558,18 @@ static CurrPosDebug* per_printf_uint8(bool option, fprintf_function func_fprintf
 
 static CurrPosDebug* per_printf_uint8_equal(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {    
+                            const char* name, bool is_mas) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint8_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        cpd = per_printf_uint8(option,func_fprintf, f, opaque, field, cpd, name);
+        cpd = per_printf_uint8(option,func_fprintf, f, opaque, field, cpd, name, is_mas);
     }
     return cpd;
 }
 
 static CurrPosDebug* per_printf_uint16(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -583,18 +590,18 @@ static CurrPosDebug* per_printf_uint16(bool option, fprintf_function func_fprint
 
 static CurrPosDebug* per_printf_uint16_equal(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {    
+                            const char* name, bool is_mas) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint16_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        cpd = per_printf_uint16(option,func_fprintf, f, opaque, field, cpd, name);
+        cpd = per_printf_uint16(option,func_fprintf, f, opaque, field, cpd, name, is_mas);
     }
     return cpd;
 }
 
 static CurrPosDebug* per_printf_uint32(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     int n_elems = vmstate_n_elems(opaque, field);
     
     if(n_elems > 1) {
@@ -614,18 +621,18 @@ static CurrPosDebug* per_printf_uint32(bool option, fprintf_function func_fprint
 
 static CurrPosDebug* per_printf_uint32_equal(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {    
+                            const char* name, bool is_mas) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint32_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        cpd = per_printf_uint32(option,func_fprintf, f, opaque, field, cpd, name);
+        cpd = per_printf_uint32(option,func_fprintf, f, opaque, field, cpd, name, is_mas);
     }
     return cpd;
 }
 
 static CurrPosDebug* per_printf_uint64(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -646,18 +653,18 @@ static CurrPosDebug* per_printf_uint64(bool option, fprintf_function func_fprint
 
 static CurrPosDebug* per_printf_uint64_equal(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {    
+                            const char* name, bool is_mas) {    
     if (field->err_hint) {
         func_fprintf(f, "- <uint64_t> %s <ERROR> %s\n", field->name, field->err_hint);
     } else {
-        cpd = per_printf_uint64(option,func_fprintf, f, opaque, field, cpd, name);
+        cpd = per_printf_uint64(option,func_fprintf, f, opaque, field, cpd, name, is_mas);
     }
     return cpd;
 }
 
 static CurrPosDebug* per_printf_float64(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -678,7 +685,7 @@ static CurrPosDebug* per_printf_float64(bool option, fprintf_function func_fprin
 
 static CurrPosDebug* per_printf_CPU_Double_U(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -705,7 +712,7 @@ static CurrPosDebug* per_printf_CPU_Double_U(bool option, fprintf_function func_
 
 static CurrPosDebug* per_printf_timer(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -732,7 +739,7 @@ static CurrPosDebug* per_printf_timer(bool option, fprintf_function func_fprintf
 
 static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -767,7 +774,7 @@ static CurrPosDebug* per_printf_buffer(bool option, fprintf_function func_fprint
 
 static CurrPosDebug* per_printf_bitmap(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -804,7 +811,7 @@ static CurrPosDebug* per_printf_bitmap(bool option, fprintf_function func_fprint
 
 static CurrPosDebug* per_printf_str(bool option, fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name) {
+                            const char* name, bool is_mas) {
     
     int n_elems = vmstate_n_elems(opaque, field);
     
@@ -825,7 +832,7 @@ static CurrPosDebug* per_printf_str(bool option, fprintf_function func_fprintf, 
 
 static CurrPosDebug* per_printf_qtailq(bool option, fprintf_function func_fprintf, void *f,
                                     void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    const char * name)  {
+                                    const char * name, bool is_mas)  {
     const VMStateDescription *vmsd = cpd->vmsd;
     int n_elems = vmstate_n_elems(opaque, field);
 
@@ -854,6 +861,101 @@ static CurrPosDebug* per_printf_qtailq(bool option, fprintf_function func_fprint
         }
     }
     return cpd;                                
+}
+
+
+static CurrPosDebug* Print_information_fields(bool option, fprintf_function func_fprintf, void *f,
+                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
+                                    const char * name, bool is_mas) {
+    
+    if (field->flags & VMS_POINTER) {
+        opaque = per_printf_pointer(option, func_fprintf, f, opaque, field, is_mas);
+        if (!option) {
+            return cpd;
+        }
+    } 
+    if (field->flags & VMS_ARRAY_OF_POINTER) {
+        opaque = per_printf_arr_pointer(option, func_fprintf, f, opaque, field, is_mas);
+        int n_elems = vmstate_n_elems(opaque, field);
+        if (!(option && n_elems == 1)) {
+            return cpd;
+        }
+    } 
+    if (field->flags & VMS_STRUCT) {
+        cpd = per_printf_struct(option,"Struct", func_fprintf,
+                                f, field, opaque, cpd, name, is_mas);
+    } else if (field->flags & VMS_VSTRUCT) {
+        cpd = per_printf_struct(option,"VStruct", func_fprintf,
+                                f, field, opaque, cpd, name, is_mas);
+    } else {
+        if (!strcmp(field->info->name,"int8")) {
+            cpd = per_printf_int8(option,func_fprintf, f, opaque, field,
+                                  cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"bool")) {
+            cpd = per_printf_bool(option,func_fprintf, f, opaque, field,
+                                  cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"int16")) {
+            cpd = per_printf_int16(option,func_fprintf, f, opaque, field,
+                                   cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"int32") ||
+                   !strcmp(field->info->name,"int32 le")) {
+            cpd = per_printf_int32(option,func_fprintf, f, opaque, field,
+                                   cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"int32 equal")) {
+            cpd = per_printf_int32_equal(option,func_fprintf, f, opaque, field, 
+                                         cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"int64")) {
+            cpd = per_printf_int64(option,func_fprintf, f, opaque, field,
+                                   cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint8")) {
+            cpd = per_printf_uint8(option,func_fprintf, f, opaque, field, 
+                                   cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"uint8 equal")) {
+            cpd = per_printf_uint8_equal(option,func_fprintf, f, opaque, field,
+                                         cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint16")) {
+            cpd = per_printf_uint16(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint16 equal")) {
+            cpd = per_printf_uint16_equal(option,func_fprintf, f, opaque, field,
+                                          cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint32")) {
+            cpd = per_printf_uint32(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint32 equal")) {
+            cpd = per_printf_uint32_equal(option,func_fprintf, f, opaque, field,
+                                          cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"uint64")) {
+            cpd = per_printf_uint64(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"uint64 equal")) {
+            cpd = per_printf_uint64_equal(option,func_fprintf, f, opaque, field,
+                                          cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"float64")) {
+            cpd = per_printf_float64(option,func_fprintf, f, opaque, field,
+                                     cpd, name, is_mas);
+        } else if (!strcmp(field->info->name,"CPU_Double_U")) {
+            cpd = per_printf_CPU_Double_U(option,func_fprintf, f, opaque, field,
+                                          cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"timer")) {
+            cpd = per_printf_timer(option,func_fprintf, f, opaque, field,
+                                   cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"buffer") ||
+                  !strcmp(field->info->name,"unused_buffer")) {
+            cpd = per_printf_buffer(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"bitmap")) {
+            cpd = per_printf_bitmap(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"qtailq")) {
+            cpd = per_printf_qtailq(option,func_fprintf, f, opaque, field,
+                                    cpd, name, is_mas);
+        } else if(!strcmp(field->info->name,"str")) {
+            cpd = per_printf_str(option,func_fprintf, f, opaque, field,
+                                 cpd, name, is_mas);
+        }
+    }
+    return cpd;
 }
 
 
@@ -892,41 +994,20 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
             int size = vmstate_size(opaque, field);
             opaque += size * ind;
                 
-            if(field->vmsd) {
-                vmsd = field->vmsd;
-                if(vmsd->fields) {
-                    field = vmsd->fields;
-                }
-                cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
-            } else {
-                if (!strcmp(field->info->name, "int8")) {
-                    func_fprintf(f, "- <int8_t> %s %i\n", name, *(uint8_t *)opaque);
-                } else if (!strcmp(field->info->name, "bool")) {
-                    func_fprintf(f, "- <bool> %s %i\n", name, *(bool *)opaque);
-                } else if (!strcmp(field->info->name, "int16")) {
-                    func_fprintf(f, "- <int16_t> %s %i\n", name, *(int16_t *)opaque);
-                } else if (!strcmp(field->info->name, "int32") ||
-                        !strcmp(field->info->name, "int32 le") || 
-                        !strcmp(field->info->name, "int32 equal")) {
-                    func_fprintf(f, "- <int32_t> %s %i\n", name, *(int32_t *)opaque);
-                } else if (!strcmp(field->info->name, "int64")) {
-                    func_fprintf(f, "- <int64_t> %s %li\n", name, *(int64_t *)opaque);
-                } else if (!strcmp(field->info->name, "uint8") || 
-                        !strcmp(field->info->name, "uint8 equal")) {
-                    func_fprintf(f, "- <uint8_t> %s %i\n", name, *(uint8_t *)opaque); 
-                } else if (!strcmp(field->info->name, "uint16") ||
-                        !strcmp(field->info->name, "uint16 equal")) {
-                    func_fprintf(f, "- <uint16_t> %s %i\n", name, *(uint16_t *)opaque);
-                } else if (!strcmp(field->info->name, "uint32") ||
-                        !strcmp(field->info->name, "uint32 equal")) {
-                    func_fprintf(f, "- <uint32_t> %s %i\n", name, *(uint32_t *)opaque);
-                } else if (!strcmp(field->info->name, "uint64") ||
-                        !strcmp(field->info->name, "uint64 equal")) {
-                    func_fprintf(f, "- <uint64_t> %s %li\n", name, *(uint64_t *)opaque);
-                } else if (!strcmp(field->info->name, "float64")) {
-                    func_fprintf(f, "- <float64> %s %li\n", name, *(int64_t *)opaque);
-                }
-            }
+            // if(field->vmsd) {
+            //     vmsd = field->vmsd;
+            //     if(vmsd->fields) {
+            //         field = vmsd->fields;
+            //     }
+            //     cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
+            // } else {
+            //     /*я как бы до сих пор смотрю на mas[i]!! надо пофиксить*/
+                
+            //     cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
+            // }
+
+            cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
+
             return cpd;
         } else {
             option = true;
@@ -943,95 +1024,8 @@ CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* na
         
         void *curr_elem = opaque + field->offset;
                 
-        if (field->flags & VMS_POINTER) {
-            curr_elem = per_printf_pointer(option, func_fprintf, f, curr_elem, field);
-            if (!option) {
-                field++;
-                continue;
-            }
-        } 
-        if (field->flags & VMS_ARRAY_OF_POINTER) {
-            curr_elem = per_printf_arr_pointer(option, func_fprintf, f, curr_elem, field);
-            int n_elems = vmstate_n_elems(opaque, field);
-            if (!(option && n_elems == 1)) {
-                field++;
-                continue;
-            }
-        } 
-        if (field->flags & VMS_STRUCT) {
-            cpd = per_printf_struct(option,"Struct", func_fprintf,
-                                f, field, curr_elem, cpd, name);
-        } else if (field->flags & VMS_VSTRUCT) {
-            cpd = per_printf_struct(option,"VStruct", func_fprintf,
-                                f, field, curr_elem, cpd, name);
-        } else {
-            if (!strcmp(field->info->name,"int8")) {
-                cpd = per_printf_int8(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"bool")) {
-                cpd = per_printf_bool(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"int16")) {
-                cpd = per_printf_int16(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"int32") ||
-                       !strcmp(field->info->name,"int32 le")) {
-                cpd = per_printf_int32(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"int32 equal")) {
-                cpd = per_printf_int32_equal(option,func_fprintf, f, curr_elem, field, 
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"int64")) {
-                cpd = per_printf_int64(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint8")) {
-                cpd = per_printf_uint8(option,func_fprintf, f, curr_elem, field, 
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"uint8 equal")) {
-                cpd = per_printf_uint8_equal(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint16")) {
-                cpd = per_printf_uint16(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint16 equal")) {
-                cpd = per_printf_uint16_equal(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint32")) {
-                cpd = per_printf_uint32(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint32 equal")) {
-                cpd = per_printf_uint32_equal(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"uint64")) {
-                cpd = per_printf_uint64(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"uint64 equal")) {
-                cpd = per_printf_uint64_equal(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"float64")) {
-                cpd = per_printf_float64(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if (!strcmp(field->info->name,"CPU_Double_U")) {
-                cpd = per_printf_CPU_Double_U(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"timer")) {
-                cpd = per_printf_timer(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"buffer") ||
-                      !strcmp(field->info->name,"unused_buffer")) {
-                cpd = per_printf_buffer(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"bitmap")) {
-                cpd = per_printf_bitmap(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"qtailq")) {
-                cpd = per_printf_qtailq(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            } else if(!strcmp(field->info->name,"str")) {
-                cpd = per_printf_str(option,func_fprintf, f, curr_elem, field,
-                                    cpd, name);
-            }
-        }
+        cpd = Print_information_fields(option,func_fprintf,f,curr_elem,field,cpd,name,false);
+
         field++;
     }
     return cpd;

@@ -1416,6 +1416,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
     if(!strcmp(name,"..")) {
         if(cpd->last) {
             cpd = cpd->last;
+            hmp_peripherals(mon,qdict);
         }
         return;
     }
