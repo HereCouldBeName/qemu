@@ -359,7 +359,6 @@ static CurrPosDebug* per_printf_struct(bool option, const char* txt, fprintf_fun
 
     /*Go to struct of array element*/
     if(is_mas) {
-        option = true;
         n_elems = 1;
     }
 
@@ -959,76 +958,139 @@ static CurrPosDebug* Print_information_fields(bool option, fprintf_function func
 }
 
 
-CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
+#define FIELD_BEFOR_JUMP(cpd, vmsd) cpd->field ? cpd->field : vmsd->fields
 
+CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
+    
     print_path(cpd, func_fprintf, f, name);
-    if(name) {
+    if (name) {
         func_fprintf(f, "%s",name);
     } 
     func_fprintf(f, "\n");
-
+    
     const VMStateDescription *vmsd = cpd->vmsd;
     void *opaque = cpd->opaque;
-    VMStateField *field = cpd->field ? cpd->field : vmsd->fields;
+    VMStateField *field = FIELD_BEFOR_JUMP(cpd, vmsd);
     
     /*
         *option - flag responsible for displaying a concrete field
     */
-    bool option = false;
+    //bool option = false;
     
+    void* curr_elem;
     
-    if(name) {
-        int ind = -1;
+    /*Check name*/
+    if (name) {
+        
+        if (!field) {
+            func_fprintf(f, "Current field hasn't child fields\n");
+            return cpd;
+        }
+        
+        
+        /*get number of elements in the field where you stand*/
         int n_elems = vmstate_n_elems(opaque, field);
-        if(cpd->field && n_elems > 1) {
-            ind = per_get_index_mas(name,cpd->field->name);
-            if(ind < 0 || ind >= n_elems) {
+        
+        /*field is array*/
+        if (n_elems > 1) {
+            int ind = per_get_index_mas(name,cpd->field->name);
+            if( ind < 0 || ind >= n_elems) {
                 func_fprintf(f, "Invalid field name received\n");
                 return cpd;
             }
-        }
-        if(ind != -1) {
+            
             /*
                 *go to need index
             */
             int size = vmstate_size(opaque, field);
             opaque += size * ind;
-                
-            // if(field->vmsd) {
-            //     vmsd = field->vmsd;
-            //     if(vmsd->fields) {
-            //         field = vmsd->fields;
-            //     }
-            //     cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
-            // } else {
-            //     /*я как бы до сих пор смотрю на mas[i]!! надо пофиксить*/
-                
-            //     cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
-            // }
-
-            cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
-
-            return cpd;
-        } else {
-            option = true;
+            
+            return Print_information_fields(true,func_fprintf,f,opaque,field,cpd,name,true);
+            
         }
-    }
-
-    while (field->name != NULL) {
         
-        /*search field with name*/
-        if(option && strcmp(field->name,name)) {
+        
+        /*find file with name = "name"*/
+        while (field->name != NULL) {
+
+            if (strcmp(field->name, name)) {
+                field++;
+                continue;
+            }
+            
+            curr_elem = opaque + field->offset;
+            
+            func_fprintf(f, "is hear?\n");
+            return Print_information_fields(true,func_fprintf,f,curr_elem,field,cpd,name,false);
+        }
+        
+        func_fprintf(f, "Current field hasn't child field with name = \"%s\"\n",name);
+        return cpd;
+        
+    } else {
+        while (field->name != NULL) {
+            
+            curr_elem = opaque + field->offset;
+            
+            cpd = Print_information_fields(false,func_fprintf,f,curr_elem,field,cpd,name,false);
+            
             field++;
-            continue;
         }
-        
-        void *curr_elem = opaque + field->offset;
-                
-        cpd = Print_information_fields(option,func_fprintf,f,curr_elem,field,cpd,name,false);
-
-        field++;
+        return cpd;
     }
-    return cpd;
+    
+    // if(name) {
+    //     int ind = -1;
+    //     int n_elems = vmstate_n_elems(opaque, field);
+    //     if(cpd->field && n_elems > 1) {
+    //         ind = per_get_index_mas(name,cpd->field->name);
+    //         if(ind < 0 || ind >= n_elems) {
+    //             func_fprintf(f, "Invalid field name received\n");
+    //             return cpd;
+    //         }
+    //     }
+    //     if(ind != -1) {
+    //         /*
+    //             *go to need index
+    //         */
+    //         int size = vmstate_size(opaque, field);
+    //         opaque += size * ind;
+    
+    //         // if(field->vmsd) {
+    //         //     vmsd = field->vmsd;
+    //         //     if(vmsd->fields) {
+    //         //         field = vmsd->fields;
+    //         //     }
+    //         //     cpd = create_next_cpd(cpd,vmsd,field,opaque, name);
+    //         // } else {
+    //         //     /*я как бы до сих пор смотрю на mas[i]!! надо пофиксить*/
+    
+    //         //     cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
+    //         // }
+    
+    //         cpd = Print_information_fields(option,func_fprintf,f,opaque,field,cpd,name,true);
+    
+    //         return cpd;
+    //     } else {
+    //         option = true;
+    //     }
+    // }
+    
+    // while (field->name != NULL) {
+    
+    //     /*search field with name*/
+    //     if(option && strcmp(field->name,name)) {
+    //         field++;
+    //         continue;
+    //     }
+    
+    //     void *curr_elem = opaque + field->offset;
+    
+    //     cpd = Print_information_fields(option,func_fprintf,f,curr_elem,field,cpd,name,false);
+    
+    //     field++;
+    // }
+    // return cpd;
 }
 
 
