@@ -1411,6 +1411,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         cpd->vmsd = NULL;
         cpd->name = NULL;
         cpd->next = NULL;
+        cpd->is_array = false;
     }
     const char *name = qdict_get_str(qdict, "name");
     if(!strcmp(name,"..")) {

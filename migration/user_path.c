@@ -20,7 +20,7 @@
 */
 
 CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name) {
+                            void* opaque, const char* name, bool is_array) {
     
     if(cpd->next && !strcmp(cpd->next->name, name)) {
         return cpd->next;
@@ -33,6 +33,7 @@ CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
     tmp->vmsd = vmsd;
     tmp->last = cpd;
     tmp->next = NULL;
+    tmp->is_array = is_array;
 
     size_t len = strlen(name);
     tmp->name = malloc((len + 1) * sizeof(const char));

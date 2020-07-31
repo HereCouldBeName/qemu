@@ -20,9 +20,10 @@ typedef struct CurrPosDebug {
     void* opaque;
     struct CurrPosDebug* last;
     struct CurrPosDebug* next;
+    bool is_array;
 } CurrPosDebug;
 
 CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name);
+                            void* opaque, const char* name, bool is_array);
 
 #endif
