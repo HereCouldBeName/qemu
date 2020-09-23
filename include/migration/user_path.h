@@ -21,9 +21,16 @@ typedef struct CurrPosDebug {
     struct CurrPosDebug* last;
     struct CurrPosDebug* next;
     bool is_array;
+    bool is_qlist;
 } CurrPosDebug;
 
-CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name, bool is_array);
+CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name);
+
+CurrPosDebug* create_next_cpd_array(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name);
+
+CurrPosDebug* create_next_cpd_qlist(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name);
 
 #endif

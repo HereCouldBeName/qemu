@@ -2569,7 +2569,7 @@ CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name,
     } else {
         QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
             if(!strcmp(se->idstr, name)) {
-                cpd = create_next_cpd(cpd, se->vmsd, NULL, se->opaque, name, false);
+                cpd = create_next_cpd(cpd, se->vmsd, NULL, se->opaque, name);
                 func_fprintf(f, "Name: '%s' \n", cpd->name);
                 cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
                 return cpd;

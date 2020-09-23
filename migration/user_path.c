@@ -20,9 +20,9 @@
 */
 
 CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name, bool is_array) {
+                            void* opaque, const char* name) {
     
-    if(cpd->next && !strcmp(cpd->next->name, name)) {
+    if (cpd->next && !strcmp(cpd->next->name, name)) {
         return cpd->next;
     }
 
@@ -33,7 +33,8 @@ CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
     tmp->vmsd = vmsd;
     tmp->last = cpd;
     tmp->next = NULL;
-    tmp->is_array = is_array;
+    tmp->is_array = false;
+    tmp->is_qlist = false;
 
     size_t len = strlen(name);
     tmp->name = malloc((len + 1) * sizeof(const char));
@@ -41,6 +42,36 @@ CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
     tmp->name[len] = '\0';
 
     cpd->next = tmp;
+
+    return tmp;
+}
+
+CurrPosDebug* create_next_cpd_array(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
+                            void* opaque, const char* name) {
+    
+    if (cpd->next && !strcmp(cpd->next->name, name)) {
+        return cpd->next;
+    }
+
+    CurrPosDebug* tmp;
+    
+    tmp = create_next_cpd(cpd, vmsd, field, opaque, name);
+    tmp->is_array = true;
+
+    return tmp;
+}
+
+CurrPosDebug* create_next_cpd_qlist(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
+                            void* opaque, const char* name) {
+    
+    if (cpd->next && !strcmp(cpd->next->name, name)) {
+        return cpd->next;
+    }
+
+    CurrPosDebug* tmp;
+    
+    tmp = create_next_cpd(cpd, vmsd, field, opaque, name);
+    tmp->is_qlist = true;
 
     return tmp;
 }
