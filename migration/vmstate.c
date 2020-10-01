@@ -784,24 +784,28 @@ static CurrPosDebug* per_printf_bitmap(fprintf_function func_fprintf, void *f,
             }
             cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name);
         } else {
-            int size = vmstate_size(opaque, field);
+            int size = vmstate_size(cpd->opaque, field);
             unsigned long *bmp = (unsigned long *)opaque;
-            int idx = 0;
-            func_fprintf(f,"- <bitmap> %s: \n",field->name);
-            for (int i = 0; i < BITS_TO_U64S(size); i++) {
-                uint64_t w = bmp[idx++];
+            int i, idx = 0;
+            func_fprintf(f, "<bitmap> %s: \n", name);
+            func_fprintf(f,"SIZE : %i not size: %i\n", BITS_TO_U64S(size), size);
+            for (i = 0; i < BITS_TO_U64S(size); i++) {
+                idx++;
                 if (sizeof(unsigned long) == 4 && idx < BITS_TO_LONGS(size)) {
-                    w |= ((uint64_t)bmp[idx++]) << 32;
+                    bmp[idx] = bmp[idx] >> 32;
+                    idx++;
                 }
-                func_fprintf(f,"%li ",w);
+            }
+            for(long i=0; i < size ; i++) {
+                func_fprintf(f,"%i ", test_bit(i,bmp));
             }
             func_fprintf(f,"\n");
         }
     } else {
         if (n_elems > 1) {
-            func_fprintf(f, "- <Array uint8_t buffer> %s\n", field->name); 
+            func_fprintf(f, "- <Array bitmap> %s\n", field->name); 
         } else {
-            func_fprintf(f, "- <uint8_t buffer> %s\n", field->name); 
+            func_fprintf(f, "- <bitmap> %s\n", field->name); 
         }
     }
     return cpd;
