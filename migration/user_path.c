@@ -34,7 +34,8 @@ CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
     tmp->last = cpd;
     tmp->next = NULL;
     tmp->is_array = false;
-    tmp->is_qlist = false;
+    tmp->is_qtailq = false;
+    tmp->is_buff = false;
 
     size_t len = strlen(name);
     tmp->name = malloc((len + 1) * sizeof(const char));
@@ -46,8 +47,8 @@ CurrPosDebug* create_next_cpd(CurrPosDebug* cpd, const VMStateDescription *vmsd,
     return tmp;
 }
 
-CurrPosDebug* create_next_cpd_array(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name) {
+CurrPosDebug* create_next_cpd_array(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name) {
     
     if (cpd->next && !strcmp(cpd->next->name, name)) {
         return cpd->next;
@@ -61,8 +62,8 @@ CurrPosDebug* create_next_cpd_array(CurrPosDebug* cpd, const VMStateDescription 
     return tmp;
 }
 
-CurrPosDebug* create_next_cpd_qlist(CurrPosDebug* cpd, const VMStateDescription *vmsd, VMStateField *field,
-                            void* opaque, const char* name) {
+CurrPosDebug* create_next_cpd_qtailq(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name) {
     
     if (cpd->next && !strcmp(cpd->next->name, name)) {
         return cpd->next;
@@ -71,7 +72,22 @@ CurrPosDebug* create_next_cpd_qlist(CurrPosDebug* cpd, const VMStateDescription 
     CurrPosDebug* tmp;
     
     tmp = create_next_cpd(cpd, vmsd, field, opaque, name);
-    tmp->is_qlist = true;
+    tmp->is_qtailq = true;
+
+    return tmp;
+}
+
+CurrPosDebug* create_next_cpd_buff(CurrPosDebug* cpd, const VMStateDescription *vmsd,
+                            VMStateField *field, void* opaque, const char* name) {
+    
+    if (cpd->next && !strcmp(cpd->next->name, name)) {
+        return cpd->next;
+    }
+
+    CurrPosDebug* tmp;
+    
+    tmp = create_next_cpd(cpd, vmsd, field, opaque, name);
+    tmp->is_buff = true;
 
     return tmp;
 }
