@@ -12,8 +12,7 @@
 
 #include "migration/user_path.h"
 
-void vmsd_data(fprintf_function func_fprintf, void *f, const VMStateDescription *vmsd, void *opaque);
-CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
+CurrPosDebug* vmsd_data(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
 void vmsd_test(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
 
 #endif

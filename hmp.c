@@ -1393,9 +1393,9 @@ void hmp_peripherals(Monitor *mon, const QDict *qdict)
         find_device((fprintf_function)monitor_printf, mon);
     } else {
         if(cpd->field) {
-            vmsd_data_1((fprintf_function)monitor_printf,mon,cpd->name,cpd->last);
+            vmsd_data((fprintf_function)monitor_printf,mon,cpd->name,cpd->last);
         } else {
-            vmsd_data_1((fprintf_function)monitor_printf,mon,NULL,cpd);
+            vmsd_data((fprintf_function)monitor_printf,mon,NULL,cpd);
         }
     }
 }
@@ -1421,7 +1421,7 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         }
         return;
     }
-    cpd = test_reg((fprintf_function)monitor_printf, mon, name, cpd);
+    cpd = show_per_reg((fprintf_function)monitor_printf, mon, name, cpd);
 }
 
 

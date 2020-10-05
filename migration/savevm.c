@@ -2522,7 +2522,6 @@ int save_snapshot(const char *name, Error **errp)
 void find_device(fprintf_function func_fprintf, void *f) {
     func_fprintf(f, "\nList of available transfer devices: \n");
     SaveStateEntry* se;
-    //se = (SaveStateEntry *)&(savevm_state.handlers);
     QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
         if(se->vmsd) {
             func_fprintf(f, "- %s\n",se->idstr);
@@ -2530,48 +2529,17 @@ void find_device(fprintf_function func_fprintf, void *f) {
     }
 }
 
-void show_reg_peref(fprintf_function func_fprintf, void *f, const char* name) {
-    SaveStateEntry* se;
-    bool is_find = false;
-    QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
-        if(!strcmp(se->idstr,name)) {
-            func_fprintf(f,"%s\n",name);
-            vmsd_data(func_fprintf,f,se->vmsd, se->opaque);
-            is_find = true;
-        }
-    }
-    if(!is_find) {
-        func_fprintf(f, "<ERROR>Device named '%s' was not found.\n",name);
-        func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");
-    }
-}
-// /*Удалять, если введено не правильно, возможно нужен bool для возврата функции*/
-// void show_per_reg_by_name(fprintf_function func_fprintf, void *f, UserPath *up) {
-//     SaveStateEntry* se;
-//     char* device_name = up->steps[0];
-//     QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
-//         if(!strcmp(se->idstr,device_name)) {
-//             func_fprintf(f,"Curr: %s",device_name);
-//             //vmsd_data_1(func_fprintf,f,se->vmsd, se->opaque, up, 1);
-//             return;
-//         }
-//     }
-//     func_fprintf(f, "<ERROR>Device named '%s' was not found.\n",device_name);
-//     func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
-// }
-
-
-CurrPosDebug* test_reg(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
+CurrPosDebug* show_per_reg(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
     SaveStateEntry* se;
     if(cpd->vmsd) {
-        cpd = vmsd_data_1(func_fprintf, f, name, cpd);
+        cpd = vmsd_data(func_fprintf, f, name, cpd);
         return cpd;
     } else {
         QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
             if(!strcmp(se->idstr, name)) {
                 cpd = create_next_cpd(cpd, se->vmsd, NULL, se->opaque, name);
                 func_fprintf(f, "Name: '%s' \n", cpd->name);
-                cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
+                cpd = vmsd_data(func_fprintf, f, NULL, cpd);
                 return cpd;
             }
         }

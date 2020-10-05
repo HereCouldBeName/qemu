@@ -175,137 +175,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
 
 
 #define BITS_TO_U64S(nr) DIV_ROUND_UP(nr, 64)
-void vmsd_data(fprintf_function func_fprintf, void *f, const VMStateDescription *vmsd, void *opaque)
-{
-    VMStateField *field = vmsd->fields;
-    while (field->name != NULL) {
-        void *first_elem = opaque + field->offset;
-        int n_elems = vmstate_n_elems(opaque, field);
-        int size = vmstate_size(opaque, field);
-
-        if (field->flags & VMS_POINTER) {
-            first_elem = *(void **)first_elem;
-            assert(first_elem || !n_elems || !size);
-        }
-        for (int i = 0; i < n_elems; i++) {
-            void *curr_elem = first_elem + size * i;
-
-            func_fprintf(f,"%s\n",field->name);
-
-            if (field->flags & VMS_ARRAY_OF_POINTER) {
-                curr_elem = *(void **)curr_elem;
-            }
-            if (field->flags & VMS_STRUCT) {
-                func_fprintf(f,"СТРУКТУРА!!\n");
-                vmsd_data(func_fprintf,f, field->vmsd, curr_elem);
-                func_fprintf(f,"КОНЕЦ!!\n");
-            }
-            else if (field->flags & VMS_VSTRUCT) {
-                func_fprintf(f,"СТРУКТУРА!!\n");
-                vmsd_data(func_fprintf,f, field->vmsd, curr_elem);
-                func_fprintf(f,"КОНЕЦ!!\n");
-            }
-            else {
-                func_fprintf(f,"TYPE: %s\n",field->info->name);
-                if (!strcmp(field->info->name,"int8")) {
-                    func_fprintf(f,"%i\n",*(int8_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"bool")) {
-                    func_fprintf(f,"%i\n",*(bool *)curr_elem);
-                } else if (!strcmp(field->info->name,"int16")) {
-                    func_fprintf(f,"%i\n",*(int16_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"int32") ||
-                        !strcmp(field->info->name,"int32 le")) {
-                    func_fprintf(f,"%i\n",*(int32_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"int32 equal")) {
-                    if (field->err_hint) {
-                        func_fprintf(f,"%s\n", field->err_hint);
-                    } else {
-                        func_fprintf(f,"%i\n",*(int32_t *)curr_elem);
-                    }
-                }
-                 else if (!strcmp(field->info->name,"int64")) {
-                    func_fprintf(f,"%li\n",*(int64_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"uint8")) {
-                    func_fprintf(f,"%i\n",*(uint8_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"uint8 equal")) {
-                    if (field->err_hint) {
-                        func_fprintf(f,"%s\n", field->err_hint);
-                    } else {
-                        func_fprintf(f,"%i\n",*(uint8_t *)curr_elem);
-                    }
-                } else if (!strcmp(field->info->name,"uint16")) {
-                    func_fprintf(f,"%i\n",*(uint16_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"uint16 equal")) {
-                    if (field->err_hint) {
-                        func_fprintf(f,"%s\n", field->err_hint);
-                    } else {
-                        func_fprintf(f,"%i\n",*(uint16_t *)curr_elem);
-                    }
-                } else if (!strcmp(field->info->name,"uint32")) {
-                    func_fprintf(f,"%i\n",*(uint32_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"uint32 equal")) {
-                    if (field->err_hint) {
-                        func_fprintf(f,"%s\n", field->err_hint);
-                    } else {
-                        func_fprintf(f,"%i\n",*(uint32_t *)curr_elem);
-                    }
-                } else if (!strcmp(field->info->name,"uint64")) {
-                    func_fprintf(f,"%li\n",*(uint64_t *)curr_elem);
-                } else if (!strcmp(field->info->name,"uint64 equal")) {
-                    if (field->err_hint) {
-                        func_fprintf(f,"%s\n", field->err_hint);
-                    } else {
-                        func_fprintf(f,"%li\n",*(uint64_t *)curr_elem);
-                    }
-                } else if (!strcmp(field->info->name,"float64")) {
-                    func_fprintf(f,"%li\n",*(float64 *)curr_elem);
-                } else if (!strcmp(field->info->name,"CPU_Double_U")) {
-                    CPU_DoubleU elem = *(CPU_DoubleU *)curr_elem;
-                    func_fprintf(f,"ld: %ld, lower: %i, upper: %i, ll: %li\n",
-                                elem.d, elem.l.lower,elem.l.upper,elem.ll) ;
-                } else if (!strcmp(field->info->name,"timer")) {
-                    QEMUTimer elem = *(QEMUTimer *)curr_elem;
-                    func_fprintf(f,"expire_time: %li, opaque: %p, scale: %i\n",
-                                elem.expire_time, elem.opaque, elem.scale);
-                } else if (!strcmp(field->info->name,"buffer") ||
-                        !strcmp(field->info->name,"unused_buffer")) {
-                    uint8_t *buf = (uint8_t *)curr_elem;
-                    for (int i=0; i < field->size; i++) {
-                        func_fprintf(f,"%i ",buf[i]);
-                    }
-                    func_fprintf(f,"\n");
-                } else if (!strcmp(field->info->name,"bitmap")) {
-                    unsigned long *bmp = (unsigned long *)curr_elem;
-                    int idx = 0;
-                    for (int i = 0; i < BITS_TO_U64S(size); i++) {
-                        uint64_t w = bmp[idx++];
-                        if (sizeof(unsigned long) == 4 && idx < BITS_TO_LONGS(size)) {
-                            w |= ((uint64_t)bmp[idx++]) << 32;
-                        }
-                        func_fprintf(f,"%li ",w);
-                    }
-                    func_fprintf(f,"\n");
-                } else if (!strcmp(field->info->name,"qtailq")) {
-                    func_fprintf(f,"-------------qtailq start--------------\n");
-                    size_t entry_offset = field->start;
-                    void *elm;
-                    QTAILQ_RAW_FOREACH(elm, curr_elem, entry_offset) {
-                        vmsd_data(func_fprintf,f, field->vmsd, elm);
-                    }
-                    func_fprintf(f,"-------------qtailq finish--------------\n");
-                } else if (!strcmp(field->info->name,"str")) {
-                    func_fprintf(f,"%s\n",(char *)curr_elem);
-                }
-            }
-        }
-        field++;
-    }
-}
-
-
-void vmsd_test(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd){
-    func_fprintf(f,"%s %s",name,cpd->field->name);
-}
 
 static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f, const char* name){
     if (!cpd->last) {
@@ -317,9 +186,9 @@ static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f
     return;
 }
 
-static void show_help_msg(fprintf_function func_fprintf, void *f, const char* name) {
+static void show_help_msg(fprintf_function func_fprintf, void *f, const char* name, int size) {
         func_fprintf(f, "\nIf you want to see a concret element"
-                    " you need to entered %s[i]\n",name);
+                    " you need to entered %s[i], where i = {0...%i}\n",name, size-1);
 }
 
 /*
@@ -377,7 +246,7 @@ static CurrPosDebug* per_printf_struct(const char* txt, fprintf_function func_fp
             vmsd = field->vmsd;
             field = vmsd->fields;
             cpd = create_next_cpd(cpd, vmsd, field, opaque, name);
-            cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
+            cpd = vmsd_data(func_fprintf, f, NULL, cpd);
         }
     } else {
         if (n_elems > 1) {
@@ -748,7 +617,7 @@ static void per_printf_buffer_full(fprintf_function func_fprintf, void *f,
         func_fprintf(f,"%i ", buf[i]);
     }
     func_fprintf(f,"\n");
-    show_help_msg(func_fprintf, f, name);
+    show_help_msg(func_fprintf, f, name, size);
 }
 
 static CurrPosDebug* per_printf_buffer(fprintf_function func_fprintf, void *f,
@@ -805,7 +674,7 @@ static void per_printf_bitmap_full(fprintf_function func_fprintf, void *f,
         func_fprintf(f,"%i ", test_bit(i,bmp));
     }
     func_fprintf(f,"\n");
-    show_help_msg(func_fprintf, f, name);
+    show_help_msg(func_fprintf, f, name, size);
 }
 
 static CurrPosDebug* per_printf_bitmap(fprintf_function func_fprintf, void *f,
@@ -913,7 +782,7 @@ static CurrPosDebug* per_printf_qtailq(fprintf_function func_fprintf, void *f,
             vmsd = field->vmsd;
             field = vmsd->fields;
             cpd = create_next_cpd(cpd, vmsd, field, opaque, name);
-            cpd = vmsd_data_1(func_fprintf, f, NULL, cpd);
+            cpd = vmsd_data(func_fprintf, f, NULL, cpd);
         }
     } else {
         if (n_elems > 1) {
@@ -1022,7 +891,7 @@ static CurrPosDebug* Print_information_fields(fprintf_function func_fprintf, voi
     return cpd;
 }
 
-CurrPosDebug* vmsd_data_1(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
+CurrPosDebug* vmsd_data(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
     
     print_path(cpd, func_fprintf, f, name);
     if (name) {
