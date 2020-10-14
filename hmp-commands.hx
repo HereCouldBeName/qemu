@@ -387,33 +387,64 @@ ETEXI
 
 {
 		.name       = "peripherals",
-		.args_type  = "",
-		.params     = "",
+		.args_type  = "path:s",
+		.params     = "path",
 		.help       = "shows a list of available peripherals.",
 		.cmd        = hmp_peripherals,
 	},
 
+
 STEXI
-@item peripherals
+@item peripherals @var{path}
 @findex peripherals
-Shows a list of available peripherals.
+Shows a list of available peripherals @var{path}.
 ETEXI
 
 
 {
+		.name       = "state_peripherals",
+		.args_type  = "",
+		.params     = "",
+		.help       = "shows a list of available peripherals for current state.",
+		.cmd        = hmp_state_peripherals,
+	},
+
+STEXI
+@item state_peripherals
+@findex state_peripherals
+Shows a list of available peripherals for current state.
+ETEXI
+
+
+
+{
 		.name       = "per_reg",
-		.args_type  = "name:s",
-		.params     = "name",
+		.args_type  = "path:s",
+		.params     = "path",
 		.help       = "shows a list of available peripherals.",
 		.cmd        = hmp_per_reg,
 	},
 
 STEXI
-@item per_reg @var{name}
+@item per_reg @var{path}
 @findex per_reg
-Shows a registers of peripheral @var{name}.
+Shows a registers of peripheral @var{path}.
 ETEXI
 
+
+{
+		.name       = "per_reg_2",
+		.args_type  = "path:s",
+		.params     = "path",
+		.help       = "shows a list of available peripherals.",
+		.cmd        = hmp_per_reg_2,
+	},
+
+STEXI
+@item per_reg_2 @var{path}
+@findex per_reg_2
+Shows a registers of peripheral @var{path}.
+ETEXI
 
 
 

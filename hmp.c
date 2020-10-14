@@ -1385,9 +1385,14 @@ void hmp_savevm(Monitor *mon, const QDict *qdict)
     hmp_handle_error(mon, &err);
 }
 
-
-
 void hmp_peripherals(Monitor *mon, const QDict *qdict)
+{
+    const char *path = qdict_get_str(qdict, "path");
+    per_find_device((fprintf_function)monitor_printf, mon, path);
+}
+
+
+void hmp_state_peripherals(Monitor *mon, const QDict *qdict)
 {
     if(!cpd || !cpd->opaque) {
         find_device((fprintf_function)monitor_printf, mon);
@@ -1399,6 +1404,7 @@ void hmp_peripherals(Monitor *mon, const QDict *qdict)
         }
     }
 }
+
 
 
 void hmp_per_reg(Monitor *mon, const QDict *qdict)
@@ -1413,15 +1419,21 @@ void hmp_per_reg(Monitor *mon, const QDict *qdict)
         cpd->next = NULL;
         cpd->is_array = false;
     }
-    const char *name = qdict_get_str(qdict, "name");
+    const char *name = qdict_get_str(qdict, "path");
     if(!strcmp(name,"..")) {
         if(cpd->last) {
             cpd = cpd->last;
-            hmp_peripherals(mon,qdict);
+            hmp_state_peripherals(mon,qdict);
         }
         return;
     }
     cpd = show_per_reg((fprintf_function)monitor_printf, mon, name, cpd);
+}
+
+void hmp_per_reg_2(Monitor *mon, const QDict *qdict) 
+{
+    const char *path = qdict_get_str(qdict, "path");
+    per_find_device((fprintf_function)monitor_printf, mon, path);
 }
 
 

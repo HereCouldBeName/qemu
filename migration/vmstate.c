@@ -891,6 +891,61 @@ static CurrPosDebug* Print_information_fields(fprintf_function func_fprintf, voi
     return cpd;
 }
 
+
+static void vmsd_go_next(fprintf_function func_fprintf, void *f, const char* path, VMStateField *field, void *opaque) {
+    void *elem = opaque + field->offset;
+    if (field->flags & VMS_POINTER) {
+        elem = *(void **)elem;
+    }
+    if (!strcmp(field->info->name, "bool")) {
+        func_fprintf(f, "- <bool> %s %i\n", field->name, *(bool *)elem);
+    }
+    if (field->flags & VMS_VSTRUCT) {
+        func_fprintf(f,"СТРУКТУРА!!\n");
+        vmsd_data_1(func_fprintf,f, path, field->vmsd, elem);
+    }
+
+
+}
+
+void vmsd_data_1(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque) {
+    
+    if (!path) {
+        func_fprintf(f, "No path no future\n");
+        return;
+    }
+    
+    func_fprintf(f, "path is fiest: %s\n", path);
+    const char* name = get_name(&path);
+    func_fprintf(f, "path is second: %s\n", path);
+    func_fprintf(f, "name is: %s\n", name);
+    
+    if (!path && name) {
+        /*concret field*/
+        VMStateField *field = vmsd->fields;
+        void *elem = opaque + field->offset;
+        if (field->flags & VMS_STRUCT) {
+            func_fprintf(f,"СТРУКТУРА!!\n");
+            vmsd_data_1(func_fprintf,f, path, field->vmsd, elem);
+        }
+        func_fprintf(f, "Name: %s\n", name);
+    } else {
+        VMStateField *field = vmsd->fields;
+        /*need to go to next field*/
+        while (field->name != NULL) {
+            if (!strcmp(field->name, name)) {
+                
+                /*field processing*/
+                vmsd_go_next(func_fprintf, f, path, field, opaque);
+
+            }
+            field++;
+        }
+        //vmsd_data_1(func_fprintf, f, path);
+    }
+}
+
+
 CurrPosDebug* vmsd_data(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
     
     print_path(cpd, func_fprintf, f, name);

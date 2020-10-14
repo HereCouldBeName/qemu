@@ -151,6 +151,8 @@ void hmp_info_sev(Monitor *mon, const QDict *qdict);
 
 
 void hmp_peripherals(Monitor *mon, const QDict *qdict);
+void hmp_state_peripherals(Monitor *mon, const QDict *qdict);
 void hmp_per_reg(Monitor *mon, const QDict *qdict);
+void hmp_per_reg_2(Monitor *mon, const QDict *qdict);
 
 #endif

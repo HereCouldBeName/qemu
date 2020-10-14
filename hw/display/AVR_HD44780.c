@@ -66,10 +66,37 @@
 #define SIZE_CGROM 128
 #define HEIGHT_CHAR 8
 
+
+#define OV_MAXBITS 256 * BITS_PER_BYTE
+
 typedef struct test_str {
     uint8_t a[3];
     uint8_t b[3];
 } test_str;
+
+
+typedef struct TestQtailqElement TestQtailqElement;
+
+struct TestQtailqElement {
+    QTAILQ_HEAD(, TestQtailqElement1) q1;
+    QTAILQ_HEAD(, TestQtailqElement1) q2;
+    QTAILQ_ENTRY(TestQtailqElement) next;
+};
+
+
+
+typedef struct TestQtailqElement1 TestQtailqElement1;
+
+struct TestQtailqElement1 {
+    uint16_t a;
+    uint16_t b;
+    QTAILQ_ENTRY(TestQtailqElement1) next;
+};
+
+typedef struct bitmapstr {
+    unsigned long *bitmap;
+    int32_t bitmap_size;
+} bitmapstr;
 
 typedef struct hd44780_state {
     I2CSlave parent_obj;
@@ -114,6 +141,10 @@ typedef struct hd44780_state {
 
     test_str array2[2][2];
     uint8_t buffer[10];
+
+    QTAILQ_HEAD(, TestQtailqElement) q;
+
+    bitmapstr b;
 
 } hd44780_state;
 
@@ -696,6 +727,21 @@ static const GraphicHwOps hd44780_led_ops = {
     .gfx_update  = hd44780_led_update_display,
 };
 
+    // TestQtailqElement obj_qe1 = {
+    //     .b = {1,2,3},
+    //     .c = {3,2,1},
+    // };
+
+    // TestQtailqElement obj_qe2 = {
+    //     .b = {6,7,8},
+    //     .c = {8,7,6},
+    // };
+
+    TestQtailqElement obj_qe1;
+    TestQtailqElement obj_qe2;
+    TestQtailqElement1 a1, a2, a3, a4;
+    TestQtailqElement1 a5, a6, a7, a8;
+
 static void hd44780_realize(DeviceState *dev, Error **errp)
 {
     hd44780_state *s = HD44780(dev);
@@ -715,6 +761,76 @@ static void hd44780_realize(DeviceState *dev, Error **errp)
     for(int i=0; i<10; i++) {
         s->buffer[i] = i * 2;
     }
+
+    /*TEST QTAIL Q*/
+
+    QTAILQ_INIT(&obj_qe1.q1);
+    QTAILQ_INIT(&obj_qe1.q2);
+
+    QTAILQ_INIT(&obj_qe2.q1);
+    QTAILQ_INIT(&obj_qe2.q2);
+
+    a1.a = 10; a2.a = 20; a3.a = 30; a4.a = 40;
+    a1.b = 100; a2.b = 200; a3.b = 300; a4.b = 400;
+
+    a5.a = 50; a6.a = 60; a7.a = 70; a8.a = 80;
+    a5.b = 500; a6.b = 600; a7.b = 700; a8.b = 800;
+    
+    QTAILQ_INSERT_TAIL(&obj_qe1.q1, &a1, next);
+    QTAILQ_INSERT_TAIL(&obj_qe1.q1, &a2, next);
+
+    QTAILQ_INSERT_TAIL(&obj_qe1.q2, &a3, next);
+    QTAILQ_INSERT_TAIL(&obj_qe1.q2, &a4, next);
+
+    QTAILQ_INSERT_TAIL(&obj_qe2.q1, &a5, next);
+    QTAILQ_INSERT_TAIL(&obj_qe2.q1, &a6, next);
+
+    QTAILQ_INSERT_TAIL(&obj_qe2.q2, &a7, next);
+    QTAILQ_INSERT_TAIL(&obj_qe2.q2, &a8, next);
+
+
+    /*for(int i=0; i<3; i++) {
+        obj_qe1.b[i] = 1 * i;
+        obj_qe1.c[i] = 2 * i;
+
+        obj_qe2.b[i] = 3 * i;
+        obj_qe2.c[i] = 4 * i;
+        for(int i=0; i<3; i++) {
+            obj_qe1.s1.a[i] = (1+i) * 2;
+            obj_qe1.s1.b[i] = (1+i) * 3;
+            
+            obj_qe1.s2.a[i] = (2+i) * 2;
+            obj_qe1.s2.b[i] = (2+i) * 3;
+
+
+            obj_qe2.s1.a[i] = (1+i) * 4;
+            obj_qe2.s1.b[i] = (1+i) * 9;
+            
+            obj_qe2.s2.a[i] = (2+i) * 4;
+            obj_qe2.s2.b[i] = (2+i) * 9;
+        }
+    }*/
+
+    QTAILQ_INIT(&s->q);
+    QTAILQ_INSERT_TAIL(&s->q, &obj_qe1, next);
+    QTAILQ_INSERT_TAIL(&s->q, &obj_qe2, next);
+    /*END OF TEST*/
+
+    s->b.bitmap_size = OV_MAXBITS;
+    s->b.bitmap = bitmap_new(s->b.bitmap_size );
+    // for(long i=0; i<OV_MAXBITS; i++) {
+    //     set_bit(i,s->bitmap);
+    // }
+    set_bit(5, s->b.bitmap);
+    set_bit(10, s->b.bitmap);
+    set_bit(256, s->b.bitmap);
+
+    // printf("Is bit:\n");
+    // for(long i=0; i<s->b.bitmap_size ; i++) {
+    //     printf("%i ", test_bit(i,s->b.bitmap));
+    // }
+    // printf("\n");
+
 }
 
 static void hd44780_set_columns(Object *obj, Visitor *v, const char *name,
@@ -769,6 +885,54 @@ static const VMStateDescription vmstate_test = {
     }
 };
 
+// static const VMStateDescription vmstate_q_element = {
+//     .name = "test-queue-element",
+//     .version_id = 1,
+//     .minimum_version_id = 1,
+//     .fields = (VMStateField[]) {
+//         VMSTATE_STRUCT(s1,TestQtailqElement, 1, vmstate_test, test_str),
+//         VMSTATE_STRUCT(s2,TestQtailqElement, 1, vmstate_test, test_str),
+//         VMSTATE_UINT8_ARRAY(b, TestQtailqElement, 3),
+//         VMSTATE_UINT8_ARRAY(c, TestQtailqElement, 3),
+//         VMSTATE_END_OF_LIST()
+//     },
+// };
+
+static const VMStateDescription vmstate_q_element1 = {
+    .name = "test-queue-element",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT16(a, TestQtailqElement1),
+        VMSTATE_UINT16(b, TestQtailqElement1),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
+
+static const VMStateDescription vmstate_q_element = {
+    .name = "test-queue-element",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_QTAILQ_V(q1, TestQtailqElement, 1, vmstate_q_element1, TestQtailqElement1,
+                           next),
+        VMSTATE_QTAILQ_V(q2, TestQtailqElement, 1, vmstate_q_element1, TestQtailqElement1,
+                           next),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
+static const VMStateDescription vmstate_b = {
+    .name = "b_test",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_BITMAP(bitmap, bitmapstr, 1, bitmap_size),
+        VMSTATE_END_OF_LIST(),
+    },
+};
+
 static const VMStateDescription vmstate_hd44780 = {
     .name = "hd44780_lcd",
     .version_id = 1,
@@ -805,6 +969,15 @@ static const VMStateDescription vmstate_hd44780 = {
                                test_str),
         
         VMSTATE_BUFFER(buffer, hd44780_state),
+
+        VMSTATE_QTAILQ_V(q, hd44780_state, 1, vmstate_q_element, TestQtailqElement,
+                           next),
+
+        VMSTATE_STRUCT(b,hd44780_state, 1, vmstate_b ,bitmapstr),
+
+        // VMSTATE_INT32(bitmap_size, hd44780_state),
+
+        // VMSTATE_BITMAP(bitmap, hd44780_state, 1, bitmap_size),
 
         VMSTATE_END_OF_LIST()
     }

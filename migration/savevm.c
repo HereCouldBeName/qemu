@@ -2550,6 +2550,38 @@ CurrPosDebug* show_per_reg(fprintf_function func_fprintf, void *f, const char* n
 }
 
 
+const char* get_name(const char** path) {
+    const char *p = strchr(*path, '/');
+    if(p) {
+        uint16_t len  = p - *path;
+        char* name = malloc(len + 1);
+        strncpy(name, *path, len);
+        name[len] = '\0';
+        *path = p + 1;
+        return name;
+    } else {
+        const char* name = *path;
+        *path = NULL;
+        return name;
+    }
+}
+
+
+void per_find_device(fprintf_function func_fprintf, void *f, const char* path) {
+
+    const char* name = get_name(&path);
+    SaveStateEntry* se;
+    QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
+        if(!strcmp(se->idstr, name)) {
+            func_fprintf(f, "Name: '%s' \n", se->idstr);
+            vmsd_data_1(func_fprintf, f, path, se->vmsd, se->opaque);
+            return;
+        }
+    }
+    func_fprintf(f, "<ERROR>Device named '%s' was not found.\n", name);
+    func_fprintf(f, "To view a list of available transfer devices, enter 'peripherals'\n");     
+    return;
+}
 
 
 void qmp_xen_save_devices_state(const char *filename, bool has_live, bool live,
