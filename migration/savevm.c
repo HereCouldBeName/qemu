@@ -2558,6 +2558,9 @@ const char* get_name(const char** path) {
         strncpy(name, *path, len);
         name[len] = '\0';
         *path = p + 1;
+        if (!strlen(*path)) {
+            *path = NULL;
+        } 
         return name;
     } else {
         const char* name = *path;
