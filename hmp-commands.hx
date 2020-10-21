@@ -380,42 +380,19 @@ Set the whole virtual machine to the snapshot identified by the tag
 @var{tag} or the unique snapshot ID @var{id}.
 ETEXI
 
-
-
-
-
-
 {
 		.name       = "peripherals",
-		.args_type  = "path:s",
+		.args_type  = "path",
 		.params     = "path",
 		.help       = "shows a list of available peripherals.",
 		.cmd        = hmp_peripherals,
 	},
 
-
 STEXI
-@item peripherals @var{path}
+@item peripherals
 @findex peripherals
-Shows a list of available peripherals @var{path}.
+Shows a list of available peripherals.
 ETEXI
-
-
-{
-		.name       = "state_peripherals",
-		.args_type  = "",
-		.params     = "",
-		.help       = "shows a list of available peripherals for current state.",
-		.cmd        = hmp_state_peripherals,
-	},
-
-STEXI
-@item state_peripherals
-@findex state_peripherals
-Shows a list of available peripherals for current state.
-ETEXI
-
-
 
 {
 		.name       = "per_reg",
@@ -430,24 +407,6 @@ STEXI
 @findex per_reg
 Shows a registers of peripheral @var{path}.
 ETEXI
-
-
-{
-		.name       = "per_reg_2",
-		.args_type  = "path:s",
-		.params     = "path",
-		.help       = "shows a list of available peripherals.",
-		.cmd        = hmp_per_reg_2,
-	},
-
-STEXI
-@item per_reg_2 @var{path}
-@findex per_reg_2
-Shows a registers of peripheral @var{path}.
-ETEXI
-
-
-
 
     {
         .name       = "delvm",

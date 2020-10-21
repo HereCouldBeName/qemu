@@ -10,11 +10,8 @@
 #ifndef QEMU_PER_REG_DATA_H
 #define QEMU_PER_REG_DATA_H
 
-#include "migration/user_path.h"
 
-CurrPosDebug* vmsd_data(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
-void vmsd_data_1(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque);
-void vmsd_test(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd);
+void vmsd_data(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque);
 
 const char* get_name(const char** path);
 

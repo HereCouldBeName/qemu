@@ -176,32 +176,22 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
 
 #define BITS_TO_U64S(nr) DIV_ROUND_UP(nr, 64)
 
-static void print_path(CurrPosDebug* cpd, fprintf_function func_fprintf, void *f, const char* name){
-    if (!cpd->last) {
-        func_fprintf(f, "path: ");
-        return;
-    }
-    print_path(cpd->last, func_fprintf, f, name);
-    func_fprintf(f, "%s/",cpd->name);
-    return;
-}
-
-static void show_help_msg(fprintf_function func_fprintf, void *f, const char* name, int size) {
+static void show_help_msg(fprintf_function func_fprintf, void *f, const char* name, int size)
+{
         func_fprintf(f, "\nIf you want to see a concret element"
                     " you need to entered %s[i], where i = {0...%i}\n",name, size-1);
 }
 
-
 #define INDERROR -1
 #define INDEMPTY -2
 
-static int16_t per_get_ind_name(const char** name)
+static int per_get_ind_name(const char** name)
 {
-    int16_t size = strlen(*name);
-    int16_t lcopy = 0;
-    int16_t ind = INDEMPTY;
+    int size = strlen(*name);
+    int lcopy = 0;
+    int ind = INDEMPTY;
 
-    for (int16_t i=0; i < size; i++) {
+    for (int i = 0; i < size; i++) {
         if ((*name)[i] == '[') {
             lcopy = i;
 
@@ -210,9 +200,9 @@ static int16_t per_get_ind_name(const char** name)
             }
 
             ind = 0;
-            int16_t b_ind = i+1;
-            int16_t len = size-2;
-            for (int16_t j =len; j>=i+1; j--) {
+            int b_ind = i+1;
+            int len = size-2;
+            for (int j = len; j >= i+1; j--) {
                 ind *= 10;
                 if (!isdigit((*name)[b_ind + len - j])) {
                     return INDERROR;
@@ -231,65 +221,23 @@ static int16_t per_get_ind_name(const char** name)
     return ind;
 }
 
-/*
-    Function search index in the entered string
-    name - user input string
-    parent_name - name field
-*/
-
-
-static int per_get_index(const char* name, const char* parent_name) {
-    int ind = -1;
-    int size = strlen(name);
-    char feild_name[size];
-    memset(feild_name,0x0,size);
-
-    for (int i=0; i < size; i++) {
-        if (name[i] != '[') {
-            feild_name[i] += name[i];
-        } else {
-            if (strlen(parent_name) != i || strcmp(parent_name,feild_name)
-             || name[size-1] != ']') {
-                return -1;
-            }
-            ind = 0;
-            int b_ind = i+1;
-            int len = size-2;
-            for (int j =len; j>=i+1; j--) {
-                ind *= 10;
-                ind += (name[b_ind + len - j] - '0');
-            }
-            break;
-        }
-    }
-    return ind;
-}
-
 /*struct*/
 
-static CurrPosDebug* per_printf_data_struct(fprintf_function func_fprintf, void *f,
-                                    VMStateField *field, void *opaque, CurrPosDebug* cpd,
-                                    const char * name)  {
-    const VMStateDescription *vmsd;
-    if (cpd) {
-        vmsd = field->vmsd;
-        field = vmsd->fields;
-        cpd = create_next_cpd(cpd, vmsd, field, opaque, name);
-        cpd = vmsd_data(func_fprintf, f, NULL, cpd);
-    } else {
-        if (!strcmp(field->name, name)) {
-            get_name(&name);
-        }
-        vmsd = field->vmsd;
-        field = vmsd->fields;
-        vmsd_data_1(func_fprintf, f, name, vmsd, opaque);
+static void per_printf_data_struct(fprintf_function func_fprintf, void *f,
+                                   VMStateField *field, void *opaque, const char * name)
+{
+    if (!strcmp(field->name, name)) {
+        get_name(&name);
     }
-    return cpd;
+    const VMStateDescription *vmsd = field->vmsd;
+    field = vmsd->fields;
+    vmsd_data(func_fprintf, f, name, vmsd, opaque);
+    return;
 }
 
-static CurrPosDebug* per_printf_struct(fprintf_function func_fprintf, void *f,
-                                    VMStateField *field, void *opaque, CurrPosDebug* cpd,
-                                    const char * name, int n_elems)  {
+static void per_printf_struct(fprintf_function func_fprintf, void *f, VMStateField *field,
+                              void *opaque, const char * name, int n_elems)
+{
     const char* type;
     if(field->flags & VMS_STRUCT) {
         type = "Struct";
@@ -301,11 +249,8 @@ static CurrPosDebug* per_printf_struct(fprintf_function func_fprintf, void *f,
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <%s el> %s[%i]\n", type, field->name, i);
             }
-            if (cpd) {
-                cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name);
-            }
         } else {
-            cpd = per_printf_data_struct(func_fprintf, f, field, opaque, cpd, name);
+            per_printf_data_struct(func_fprintf, f, field, opaque, name);
         }
     } else {
         if (n_elems > 1) {
@@ -314,7 +259,7 @@ static CurrPosDebug* per_printf_struct(fprintf_function func_fprintf, void *f,
             func_fprintf(f, "- <%s> %s\n", type, field->name);
         }
     }
-    return cpd;                                
+    return;                                
 }
 
 /*VMS POINTER*/
@@ -342,10 +287,11 @@ static void* per_printf_pointer(fprintf_function func_fprintf, void *f,
 
 static void* per_printf_arr_pointer(fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field,
-                            const char* name, int n_elems) {
+                            const char* name, int n_elems)
+{
     if (name) {
         if (n_elems > 1 && !field->info) {
-            for (int i=0; i < n_elems; i++) {
+            for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <VMS array of pointer el> %s[%i]\n", field->name, i);
             }
         } else {
@@ -398,17 +344,13 @@ static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
 }
 
 
-static CurrPosDebug* per_printf_basic(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name, int n_elems)
+static void per_printf_basic(fprintf_function func_fprintf, void *f, void* opaque,
+                        VMStateField *field, const char* name, int n_elems)
 {
     if (n_elems > 1) {
         if (name) {
             for (int i=0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array %s el> %s[%i]\n", field->info->name, field->name, i);
-            }
-            if (cpd) {
-                cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name); 
             }
         } else {
            func_fprintf(f, "- <Array %s> %s\n", field->info->name, field->name); 
@@ -416,19 +358,18 @@ static CurrPosDebug* per_printf_basic(fprintf_function func_fprintf, void *f,
     } else {
         per_printf_data_basic(func_fprintf, f, opaque, field);
     }
-    return cpd;
+    return;
 }
 
-static CurrPosDebug* per_printf_int_equal(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, CurrPosDebug* cpd, 
-                            const char* name, int n_elems)
+static void per_printf_int_equal(fprintf_function func_fprintf, void *f, void* opaque,
+                            VMStateField *field, const char* name, int n_elems)
 {   
     if (field->err_hint) {
         func_fprintf(f, "- <%s> %s <ERROR> %s\n", field->info->name, field->name, field->err_hint);
     } else {
-        cpd = per_printf_basic(func_fprintf, f, opaque, field, cpd, name, n_elems);
+        per_printf_basic(func_fprintf, f, opaque, field, name, n_elems);
     }
-    return cpd;
+    return;
 }
 
 
@@ -439,7 +380,7 @@ static void per_printf_data_CPUDouble_timer(fprintf_function func_fprintf, void 
 {
     if (!strcmp(field->info->name, "CPU_Double_U")) {
         CPU_DoubleU elem = *(CPU_DoubleU *)opaque;
-                func_fprintf(f,"- <CPU_DoubleU> ld: %ld, lower: %i, upper: %i, ll: %li\n",
+                func_fprintf(f, "- <CPU_DoubleU> ld: %ld, lower: %i, upper: %i, ll: %li\n",
                             elem.d, elem.l.lower,elem.l.upper,elem.ll) ;
     } else if (!strcmp(field->info->name, "timer")) {
         QEMUTimer elem = *(QEMUTimer *)opaque;
@@ -448,17 +389,13 @@ static void per_printf_data_CPUDouble_timer(fprintf_function func_fprintf, void 
     }
 }
 
-static CurrPosDebug* per_printf_CPUDouble_timer(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name, int n_elems)
+static void per_printf_CPUDouble_timer(fprintf_function func_fprintf, void *f, void* opaque,
+                                VMStateField *field, const char* name, int n_elems)
 {
     if (name) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array %s el> %s[%i]\n", field->info->name, field->name, i);
-            }
-            if (cpd) {
-                cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name);  
             }
         } else {
             per_printf_data_CPUDouble_timer(func_fprintf, f, opaque, field);
@@ -470,7 +407,7 @@ static CurrPosDebug* per_printf_CPUDouble_timer(fprintf_function func_fprintf, v
             func_fprintf(f, "- <%s> %s\n", field->info->name, field->name); 
         }
     }
-    return cpd;
+    return;
 }
 
 static void per_printf_data_arr_buffer_bitmap(fprintf_function func_fprintf, void *f,
@@ -479,19 +416,21 @@ static void per_printf_data_arr_buffer_bitmap(fprintf_function func_fprintf, voi
     if (!strcmp(field->info->name, "buffer") ||
         !strcmp(field->info->name, "unused_buffer")) {
         uint8_t *buf = (uint8_t *)opaque;
-        for (long i=0; i < size; i++) {
-            func_fprintf(f,"%i ", buf[i]);
+        for (long i = 0; i < size; i++) {
+            func_fprintf(f, "%i ", buf[i]);
         } 
     } else if(!strcmp(field->info->name,"bitmap")) {
         unsigned long *bmp = (unsigned long *)opaque;
-        for(long i=0; i < size; i++) {
-            func_fprintf(f,"%i ", test_bit(i,bmp));
+        for(long i = 0; i < size; i++) {
+            func_fprintf(f, "%i ", test_bit(i,bmp));
         }
     }
 
     func_fprintf(f,"\n");
     
     show_help_msg(func_fprintf, f, field->name, size);
+
+    return;
 }
 
 static bool check_size(fprintf_function func_fprintf, void *f,
@@ -509,7 +448,7 @@ static bool check_size(fprintf_function func_fprintf, void *f,
 }
 
 static void per_printf_data_buffer_bitmap(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, int16_t ind)
+                            void* opaque, VMStateField *field, int ind)
 {
     if (!strcmp(field->info->name, "buffer") ||
         !strcmp(field->info->name, "unused_buffer")) {
@@ -517,23 +456,20 @@ static void per_printf_data_buffer_bitmap(fprintf_function func_fprintf, void *f
         func_fprintf(f, "<uint8_t buffer> %s[%i]: %i\n", field->name, ind, buf[ind]);
     } else if(!strcmp(field->info->name,"bitmap")) {
         unsigned long *bmp = (unsigned long *)opaque;
-        func_fprintf(f,"<bitmap> %s: %i\n", field->name, test_bit(ind,bmp));
+        func_fprintf(f, "<bitmap> %s: %i\n", field->name, test_bit(ind,bmp));
     }
     return;
 }
 
 
-static CurrPosDebug* per_printf_buffer_bitmap(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, CurrPosDebug* cpd,
-                            const char* name, int n_elems, int size)
+static void per_printf_buffer_bitmap(fprintf_function func_fprintf, void *f,
+                            void* opaque, VMStateField *field, const char* name,
+                            int n_elems, int size)
 {    
     if (name) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array uint8_t buffer el> %s[%i]\n", field->name, i);
-            }
-            if (cpd) {
-                cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name);
             }
         } else {
             per_printf_data_arr_buffer_bitmap(func_fprintf, f, opaque, field, size);
@@ -545,11 +481,12 @@ static CurrPosDebug* per_printf_buffer_bitmap(fprintf_function func_fprintf, voi
             func_fprintf(f, "- <uint8_t buffer> %s\n", field->name); 
         }
     }
-    return cpd;
+    return;
 }
 
 
-static uint8_t get_qtailq_size(void* opaque, size_t entry_offset) {
+static uint8_t get_qtailq_size(void* opaque, size_t entry_offset)
+{
     uint16_t size = 0;
     void *elm = QTAILQ_RAW_FIRST(opaque);
     while(elm) {
@@ -567,17 +504,14 @@ static void per_printf_qtail_c(fprintf_function func_fprintf, void *f,
     }
 }
 
-static CurrPosDebug* per_printf_qtailq(fprintf_function func_fprintf, void *f,
-                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    const char * name, int n_elems, int size)
+static void per_printf_qtailq(fprintf_function func_fprintf, void *f,
+                              void *opaque, VMStateField *field,
+                              const char * name, int n_elems, int size)
 {    
     if (name) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <qtailq array el> %s[%i]\n", field->name, i);
-            }
-            if (cpd) {
-                cpd = create_next_cpd_array(cpd, cpd->vmsd, field, opaque, name);
             }
         } else {
             per_printf_qtail_c(func_fprintf, f, opaque, field, size);
@@ -589,21 +523,13 @@ static CurrPosDebug* per_printf_qtailq(fprintf_function func_fprintf, void *f,
             func_fprintf(f, "- <qtailq> %s\n", field->name);
         }
     }
-    return cpd;                                
+    return;                                
 }
 
-static int get_n_elems(void *opaque, VMStateField *field, CurrPosDebug* cpd) 
-{
-    if (cpd) {
-        return cpd->is_array ? 1 : vmstate_n_elems(opaque, field);
-    } else {
-        return vmstate_n_elems(opaque, field);
-    }
-}
 
-static void Print_qtail_el(fprintf_function func_fprintf, void *f,
-                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    int16_t ind, const char* path)
+static void Print_information_qtail_el(fprintf_function func_fprintf, void *f,
+                                    void *opaque, VMStateField *field,
+                                    int ind, const char* path)
 {
     if (field->flags & VMS_POINTER || field->flags & VMS_ARRAY_OF_POINTER) {
         opaque = per_printf_data_pointer(opaque);
@@ -622,12 +548,11 @@ static void Print_qtail_el(fprintf_function func_fprintf, void *f,
         elm = QTAILQ_RAW_NEXT(elm, entry_offset);
         i++;
     }
-    per_printf_data_struct(func_fprintf, f, field, elm, cpd, path);
+    per_printf_data_struct(func_fprintf, f, field, elm, path);
 }
 
-static void Print_information_buff_bitmap(fprintf_function func_fprintf, void *f,
-                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    int16_t ind)
+static void Print_information_buff_bitmap_el(fprintf_function func_fprintf, void *f,
+                                    void *opaque, VMStateField *field, int ind)
 {    
     int size = vmstate_size(opaque, field);
 
@@ -651,18 +576,17 @@ static int get_size(void *opaque, VMStateField *field)
     }
 }
 
-static CurrPosDebug* Print_information_find_field(fprintf_function func_fprintf, void *f,
-                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    const char * name)
+static void Print_information_find_field(fprintf_function func_fprintf, void *f,
+                                    void *opaque, VMStateField *field, const char * name)
 {
-    /*есть имя и n_elems = 1*/
+    /*name and n_elems = 1*/
     int size = get_size(opaque, field);
 
     if (field->flags & VMS_POINTER || field->flags & VMS_ARRAY_OF_POINTER) {
         opaque = per_printf_data_pointer(opaque);
     }
     if ((field->flags & VMS_STRUCT) || (field->flags & VMS_VSTRUCT)) { 
-        cpd = per_printf_data_struct(func_fprintf, f, field, opaque, cpd, name);
+        per_printf_data_struct(func_fprintf, f, field, opaque, name);
     } else if ((!strcmp(field->info->name, "int8")) ||
                (!strcmp(field->info->name, "bool")) ||
                (!strcmp(field->info->name, "int16")) ||
@@ -682,7 +606,7 @@ static CurrPosDebug* Print_information_find_field(fprintf_function func_fprintf,
         per_printf_data_basic(func_fprintf, f, opaque, field);
     } else if ((!strcmp(field->info->name, "CPU_Double_U")) ||
                (!strcmp(field->info->name, "timer"))) {
-        per_printf_data_CPUDouble_timer(func_fprintf, f, opaque, field);
+       per_printf_data_CPUDouble_timer(func_fprintf, f, opaque, field);
     } else if ((!strcmp(field->info->name,"buffer")) ||
                 (!strcmp(field->info->name,"unused_buffer")) ||
                 (!strcmp(field->info->name,"bitmap"))) {
@@ -690,14 +614,13 @@ static CurrPosDebug* Print_information_find_field(fprintf_function func_fprintf,
     } else if (!strcmp(field->info->name,"qtailq")) {
         per_printf_qtail_c(func_fprintf, f, opaque, field, size);
     }
-    return cpd;
+    return;
 }
 
-static CurrPosDebug* Print_information_fields(fprintf_function func_fprintf, void *f,
-                                    void *opaque, VMStateField *field, CurrPosDebug* cpd,
-                                    const char * name) {
-
-    int n_elems = get_n_elems(opaque, field, cpd);
+static void Print_information_fields(fprintf_function func_fprintf, void *f,
+                        void *opaque, VMStateField *field, const char * name)
+{
+    int n_elems = vmstate_n_elems(opaque, field);
     int size = get_size(opaque, field);
 
 
@@ -708,7 +631,7 @@ static CurrPosDebug* Print_information_fields(fprintf_function func_fprintf, voi
         opaque = per_printf_arr_pointer(func_fprintf, f, opaque, field, name, n_elems);
     } 
     if ((field->flags & VMS_STRUCT) ||  (field->flags & VMS_VSTRUCT)) {
-        cpd = per_printf_struct(func_fprintf, f, field, opaque, cpd, name, n_elems);
+        per_printf_struct(func_fprintf, f, field, opaque, name, n_elems);
     } else {
         if ((!strcmp(field->info->name, "int8")) || 
             (!strcmp(field->info->name, "bool")) ||
@@ -722,58 +645,44 @@ static CurrPosDebug* Print_information_fields(fprintf_function func_fprintf, voi
             (!strcmp(field->info->name, "float64")) ||
             (!strcmp(field->info->name, "int32 le")) ||
             (!strcmp(field->info->name, "str"))) {
-            cpd = per_printf_basic(func_fprintf, f, opaque, field,
-                                  cpd, name, n_elems);
+            per_printf_basic(func_fprintf, f, opaque, field, name, n_elems);
         } else if ((!strcmp(field->info->name, "int32 equal")) ||
                    (!strcmp(field->info->name, "uint8 equal")) ||
                    (!strcmp(field->info->name, "uint16 equal")) ||
                    (!strcmp(field->info->name, "uint32 equal")) ||
                    (!strcmp(field->info->name, "uint64 equal"))) {
-            cpd = per_printf_int_equal(func_fprintf, f, opaque, field, 
-                                        cpd, name, n_elems);
+            per_printf_int_equal(func_fprintf, f, opaque, field, name, n_elems);
         } else if ((!strcmp(field->info->name, "CPU_Double_U")) ||
                    (!strcmp(field->info->name, "timer"))) {
-            cpd = per_printf_CPUDouble_timer(func_fprintf, f, opaque, field,
-                                          cpd, name, n_elems);
+            per_printf_CPUDouble_timer(func_fprintf, f, opaque, field, name, n_elems);
         } else if ((!strcmp(field->info->name,"buffer")) ||
                   (!strcmp(field->info->name,"unused_buffer")) ||
                   (!strcmp(field->info->name,"bitmap"))) {
-            cpd = per_printf_buffer_bitmap(func_fprintf, f, opaque, field,
-                                    cpd, name, n_elems, size);
+           per_printf_buffer_bitmap(func_fprintf, f, opaque, field, name, n_elems, size);
         } else if (!strcmp(field->info->name,"qtailq")) {
-            cpd = per_printf_qtailq(func_fprintf, f, opaque, field,
-                                    cpd, name, n_elems, size);
+            per_printf_qtailq(func_fprintf, f, opaque, field, name, n_elems, size);
         }
     }
-    return cpd;
+    return;
 }
 
 
-void vmsd_data_1(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque) {
-    
-
+void vmsd_data(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque)
+{
     if (!path) {
-        
         VMStateField *field = vmsd->fields;
         while (field->name != NULL) {
-            
             void* curr_elem = opaque + field->offset;
-            
-            Print_information_fields(func_fprintf,f,curr_elem,field,NULL,NULL);
-             
+            Print_information_fields(func_fprintf, f, curr_elem, field, NULL);
             field++;
         }
 
         return;
     }
     
-    func_fprintf(f, "path is first: %s and len: %ld\n", path, strlen(path));
     const char* name = get_name(&path);
-    func_fprintf(f, "path is second: %s\n", path);
-    func_fprintf(f, "name is: %s\n", name);
+    int ind = per_get_ind_name(&name);
     
-    int16_t ind = per_get_ind_name(&name);
-    func_fprintf(f, "FUNCTION name: %s ind = %d\n", name, ind);
     if (ind == INDERROR) {
         func_fprintf(f, "Invalid field index received\n");
         return;
@@ -790,129 +699,35 @@ void vmsd_data_1(fprintf_function func_fprintf, void *f, const char* path, const
             if (ind != INDEMPTY) {
                 int n_elems = vmstate_n_elems(curr_elem, field);
                 if (n_elems > 1) {
-                    /*massive*/
+                    /*array*/
                     if (ind >= n_elems) {
                         func_fprintf(f, "Invalid field index received\n");
                         return;
                     }
                     int size = vmstate_size(curr_elem, field);
                     curr_elem += size * ind;
-                    Print_information_find_field(func_fprintf, f, curr_elem, field, NULL, path);
+                    Print_information_find_field(func_fprintf, f, curr_elem, field, path);
                 } else if ((!strcmp(field->info->name,"buffer")) ||
                         (!strcmp(field->info->name,"unused_buffer")) ||
                         (!strcmp(field->info->name,"bitmap"))) {
-                    Print_information_buff_bitmap(func_fprintf, f, curr_elem, field, NULL, ind);
+                    /*if we enter bitmap or buffer [i]*/
+                    Print_information_buff_bitmap_el(func_fprintf, f, curr_elem, field, ind);
                 } else if (!strcmp(field->info->name,"qtailq")) {
-                    Print_qtail_el(func_fprintf, f, curr_elem, field, NULL, ind, path);
+                    /*if we enter qtailq[i]*/
+                    Print_information_qtail_el(func_fprintf, f, curr_elem, field, ind, path);
                 } else {
                     func_fprintf(f, "this field cannot be accessed by index\n");
                 }
-                /*проверки на qtailq и другой треш*/
             } else {
-                Print_information_fields(func_fprintf, f, curr_elem, field, NULL, path);
+                Print_information_fields(func_fprintf, f, curr_elem, field, path);
             }
             return;
         }
         field++;
     }
 
-    
-}
-
-
-CurrPosDebug* vmsd_data(fprintf_function func_fprintf, void *f, const char* name, CurrPosDebug* cpd) {
-    
-    print_path(cpd, func_fprintf, f, name);
-    if (name) {
-        func_fprintf(f, "%s",name);
-    } 
-    func_fprintf(f, "\n");
-    
-    const VMStateDescription *vmsd = cpd->vmsd;
-    void *opaque = cpd->opaque;
-    VMStateField *field = cpd->field ? cpd->field : vmsd->fields;
-    
-    void* curr_elem;
-    
-    /*Check name*/
-    if (name) {
-        
-        if (!field) {
-            func_fprintf(f, "Current field hasn't child fields\n");
-            return cpd;
-        }
-        
-        /*field is array*/
-        if (cpd->is_array) {
-            /*get number of elements in the field*/
-            int n_elems = vmstate_n_elems(opaque, field);
-            int ind = per_get_index(name, cpd->field->name);
-            if (ind < 0 || ind >= n_elems) {
-                func_fprintf(f, "Invalid field name received\n");
-                return cpd;
-            }
-            
-            /*
-                *go to need index
-            */
-            int size = vmstate_size(opaque, field);
-            opaque += size * ind;
-            
-            return Print_information_fields(func_fprintf,f,opaque,field,cpd,name);
-            
-        } else if (cpd->is_qtailq) {
-            /*get number of elements in the field*/
-            size_t entry_offset = field->start;
-            int ind = per_get_index(name, cpd->field->name);
-            uint8_t size = get_qtailq_size(opaque, entry_offset);
-            if (ind < 0 || ind >= size) {
-                func_fprintf(f, "Invalid field name received\n");
-                return cpd;
-            }
-
-            /*
-                *go to need index
-            */
-            void* elm = QTAILQ_RAW_FIRST(opaque);
-            uint8_t i = 0;
-            while (i < ind) {
-                elm = QTAILQ_RAW_NEXT(elm, entry_offset);
-                i++;
-            }
-            
-            return Print_information_fields(func_fprintf,f,elm,field,cpd,name);
-            
-        } else if (cpd->is_buff) {
-            Print_information_fields(func_fprintf,f,opaque,field,cpd,name);
-            return cpd;
-        }
-        
-        
-        /*find file with name = "name"*/
-        while (field->name != NULL) {
-
-            if (strcmp(field->name, name)) {
-                field++;
-                continue;
-            }
-            curr_elem = opaque + field->offset;
-            return Print_information_fields(func_fprintf,f,curr_elem,field,cpd,name);
-        }
-        
-        func_fprintf(f, "Current field hasn't child field with name = \"%s\"\n",name);
-        return cpd;
-        
-    } else {
-        while (field->name != NULL) {
-            
-            curr_elem = opaque + field->offset;
-            
-            cpd = Print_information_fields(func_fprintf,f,curr_elem,field,cpd,name);
-            
-            field++;
-        }
-        return cpd;
-    }
+    func_fprintf(f, "Current field hasn't child field with name = \"%s\"\n", name);
+    return;
 }
 
 
