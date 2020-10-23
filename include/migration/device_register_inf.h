@@ -12,5 +12,5 @@
 
 
 void find_device(fprintf_function func_fprintf, void *f);
-void per_find_device(fprintf_function func_fprintf, void *f, const char* path);
+void per_find_device(fprintf_function func_fprintf, void *f, const char* path, bool hex);
 #endif

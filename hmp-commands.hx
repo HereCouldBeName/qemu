@@ -382,8 +382,8 @@ ETEXI
 
 {
 		.name       = "peripherals",
-		.args_type  = "path",
-		.params     = "path",
+		.args_type  = "",
+		.params     = "",
 		.help       = "shows a list of available peripherals.",
 		.cmd        = hmp_peripherals,
 	},
@@ -396,16 +396,17 @@ ETEXI
 
 {
 		.name       = "per_reg",
-		.args_type  = "path:s",
-		.params     = "path",
-		.help       = "shows a list of available peripherals.",
+		.args_type  = "path:s,hex:s?",
+		.params     = "path [hex]",
+		.help       = "Shows a registers of peripheral, use /x to get hex format.",
 		.cmd        = hmp_per_reg,
 	},
 
 STEXI
-@item per_reg @var{path}
+@item per_reg @var{path} [@var{hex}]
 @findex per_reg
-Shows a registers of peripheral @var{path}.
+Shows a registers of peripheral @var{path}
+with optional hex format @var{hex}.
 ETEXI
 
     {

@@ -2549,13 +2549,13 @@ const char* get_name(const char** path) {
     }
 }
 
-void per_find_device(fprintf_function func_fprintf, void *f, const char* path) {
+void per_find_device(fprintf_function func_fprintf, void *f, const char* path, bool hex) {
 
     const char* name = get_name(&path);
     SaveStateEntry* se;
     QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
         if(!strcmp(se->idstr, name)) {
-            vmsd_data(func_fprintf, f, path, se->vmsd, se->opaque);
+            vmsd_data(func_fprintf, f, path, se->vmsd, se->opaque, hex);
             return;
         }
     }

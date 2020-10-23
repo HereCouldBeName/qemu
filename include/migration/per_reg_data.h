@@ -11,7 +11,8 @@
 #define QEMU_PER_REG_DATA_H
 
 
-void vmsd_data(fprintf_function func_fprintf, void *f, const char* path, const VMStateDescription *vmsd, void *opaque);
+void vmsd_data(fprintf_function func_fprintf, void *f, const char* path,
+               const VMStateDescription *vmsd, void *opaque, bool hex);
 
 const char* get_name(const char** path);
 

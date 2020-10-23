@@ -1394,7 +1394,16 @@ void hmp_peripherals(Monitor *mon, const QDict *qdict)
 void hmp_per_reg(Monitor *mon, const QDict *qdict) 
 {
     const char *path = qdict_get_str(qdict, "path");
-    per_find_device((fprintf_function)monitor_printf, mon, path);
+    const char *hex = qdict_get_try_str(qdict, "hex");
+    if (hex && strcmp(hex, "/x")) {
+        monitor_printf(mon, "invalid parameter, expected /x\n");
+        return;
+    }
+    if (!hex) {
+        per_find_device((fprintf_function)monitor_printf, mon, path, false);
+    } else {
+        per_find_device((fprintf_function)monitor_printf, mon, path, true);
+    }
 }
 
 
