@@ -458,21 +458,27 @@ static void per_printf_data_CPUDouble_timer(fprintf_function func_fprintf, void 
     if (!strcmp(field->info->name, "CPU_Double_U")) {
         CPU_DoubleU elem = *(CPU_DoubleU *)opaque;
         if (hex) {
-            func_fprintf(f, "- <CPU_DoubleU> ld: %ld, lower: %#x, upper: %#x, ll: %#lx\n",
-                         elem.d, elem.l.lower,elem.l.upper,elem.ll) ;
+            func_fprintf(f, "- <CPU_DoubleU el> ld: %ld\n", elem.d);
+            func_fprintf(f, "- <CPU_DoubleU el> lower: %#x\n", elem.l.lower);
+            func_fprintf(f, "- <CPU_DoubleU el> upper: %#x\n", elem.l.upper);
+            func_fprintf(f, "- <CPU_DoubleU el> ll: %#lx\n", elem.ll);
         } else {
-            func_fprintf(f, "- <CPU_DoubleU> ld: %ld, lower: %i, upper: %i, ll: %li\n",
-                         elem.d, elem.l.lower,elem.l.upper,elem.ll) ;
+            func_fprintf(f, "- <CPU_DoubleU el> ld: %ld\n", elem.d);
+            func_fprintf(f, "- <CPU_DoubleU el> lower: %i\n", elem.l.lower);
+            func_fprintf(f, "- <CPU_DoubleU el> upper: %i\n", elem.l.upper);
+            func_fprintf(f, "- <CPU_DoubleU el> ll: %li\n", elem.ll);
         }
 
     } else if (!strcmp(field->info->name, "timer")) {
         QEMUTimer elem = *(QEMUTimer *)opaque;
         if (hex) {
-            func_fprintf(f, "- <QEMUTimer> expire_time: %#lx, opaque: %p, scale: %#x\n",
-                         elem.expire_time, elem.opaque, elem.scale); 
+            func_fprintf(f, "- <QEMUTimer el> expire_time: %#lx\n", elem.expire_time);
+            func_fprintf(f, "- <QEMUTimer el> opaque: %p\n", elem.opaque); 
+            func_fprintf(f, "- <QEMUTimer el> scale: %#x\n", elem.scale); 
         } else {
-            func_fprintf(f, "- <QEMUTimer> expire_time: %li, opaque: %p, scale: %i\n",
-                         elem.expire_time, elem.opaque, elem.scale);
+            func_fprintf(f, "- <QEMUTimer el> expire_time: %li\n", elem.expire_time);
+            func_fprintf(f, "- <QEMUTimer el> opaque: %p\n", elem.opaque); 
+            func_fprintf(f, "- <QEMUTimer el> scale: %i\n", elem.scale);
         }
                 
     }
