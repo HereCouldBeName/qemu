@@ -221,23 +221,40 @@ static int per_get_ind_name(const char** name)
     return ind;
 }
 
-/*struct*/
+/*
+* Function to navigate to structure fields
+
+* func_fprintf - Function for printing text to the console.
+* f            - pointer to console
+* field        - field in question
+* opaque       - pointer to data
+* path         - remaining way
+* hex          - indicates if this field is hexadecimal.
+*/
 
 static void per_printf_data_struct(fprintf_function func_fprintf, void *f,
                                    VMStateField *field, void *opaque,
-                                   const char * name, bool hex)
+                                   const char *path, bool hex)
 {
-    if (!strcmp(field->name, name)) {
-        get_name(&name);
-    }
+    // if (!strcmp(field->name, name)) {
+    //     get_name(&name);
+    // }
     const VMStateDescription *vmsd = field->vmsd;
     field = vmsd->fields;
-    vmsd_data(func_fprintf, f, name, vmsd, opaque, hex);
+    vmsd_data(func_fprintf, f, path, vmsd, opaque, hex);
     return;
 }
 
-static void per_printf_struct(fprintf_function func_fprintf, void *f, VMStateField *field,
-                              void *opaque, const char * name, int n_elems, bool hex)
+/*
+* Function for handling structure output
+
+* chosen       - indicates if this field is selected
+* n_elems      - number of elements
+*/
+
+static void per_printf_struct(fprintf_function func_fprintf, void *f, void *opaque, 
+                              VMStateField *field, const char *path,
+                              bool chosen, int n_elems, bool hex)
 {
     const char* type;
     if(field->flags & VMS_STRUCT) {
@@ -245,13 +262,13 @@ static void per_printf_struct(fprintf_function func_fprintf, void *f, VMStateFie
     } else {
         type = "VStruct";
     }
-    if (name) {
+    if (chosen) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <%s el> %s[%i]\n", type, field->name, i);
             }
         } else {
-            per_printf_data_struct(func_fprintf, f, field, opaque, name, hex);
+            per_printf_data_struct(func_fprintf, f, field, opaque, path, hex);
         }
     } else {
         if (n_elems > 1) {
@@ -274,9 +291,9 @@ static void* per_printf_data_pointer(void* opaque)
 
 static void* per_printf_pointer(fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field,
-                            const char* name) 
+                            bool chosen) 
 {
-    if (name) {
+    if (chosen) {
         return per_printf_data_pointer(opaque);
     } else if (!field->info) {
         func_fprintf(f, "- <VMS POINTER> %s\n", field->name);
@@ -288,9 +305,9 @@ static void* per_printf_pointer(fprintf_function func_fprintf, void *f,
 
 static void* per_printf_arr_pointer(fprintf_function func_fprintf, void *f,
                             void* opaque, VMStateField *field,
-                            const char* name, int n_elems)
+                            bool chosen, int n_elems)
 {
-    if (name) {
+    if (chosen) {
         if (n_elems > 1 && !field->info) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <VMS array of pointer el> %s[%i]\n", field->name, i);
@@ -401,11 +418,11 @@ static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
 
 
 static void per_printf_basic(fprintf_function func_fprintf, void *f, void* opaque,
-                             VMStateField *field, const char* name, int n_elems,
+                             VMStateField *field, bool chosen, int n_elems,
                              bool hex, bool sign)
 {
     if (n_elems > 1) {
-        if (name) {
+        if (chosen) {
             int size = vmstate_size(opaque, field);
             for (int i=0; i < n_elems; i++) {        
                 char* buff = per_printf_data_value(opaque, field, hex, sign);
@@ -428,12 +445,12 @@ static void per_printf_basic(fprintf_function func_fprintf, void *f, void* opaqu
 }
 
 static void per_printf_int_equal(fprintf_function func_fprintf, void *f, void* opaque,
-                            VMStateField *field, const char* name, int n_elems, bool hex, bool sign)
+                            VMStateField *field, bool chosen, int n_elems, bool hex, bool sign)
 {   
     if (field->err_hint) {
         func_fprintf(f, "- <%s> %s <ERROR> %s\n", field->info->name, field->name, field->err_hint);
     } else {
-        per_printf_basic(func_fprintf, f, opaque, field, name, n_elems, hex, sign);
+        per_printf_basic(func_fprintf, f, opaque, field, chosen, n_elems, hex, sign);
     }
     return;
 }
@@ -468,9 +485,9 @@ static void per_printf_data_CPUDouble_timer(fprintf_function func_fprintf, void 
 }
 
 static void per_printf_CPUDouble_timer(fprintf_function func_fprintf, void *f, void* opaque,
-                                VMStateField *field, const char* name, int n_elems, bool hex)
+                                VMStateField *field, bool chosen, int n_elems, bool hex)
 {
-    if (name) {
+    if (chosen) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array %s el> %s[%i]\n", field->info->name, field->name, i);
@@ -552,10 +569,10 @@ static void per_printf_data_buffer_bitmap(fprintf_function func_fprintf, void *f
 
 
 static void per_printf_buffer_bitmap(fprintf_function func_fprintf, void *f,
-                            void* opaque, VMStateField *field, const char* name,
+                            void* opaque, VMStateField *field, bool chosen,
                             int n_elems, int size, bool hex)
 {    
-    if (name) {
+    if (chosen) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <Array uint8_t buffer el> %s[%i]\n", field->name, i);
@@ -595,9 +612,9 @@ static void per_printf_qtail_c(fprintf_function func_fprintf, void *f,
 
 static void per_printf_qtailq(fprintf_function func_fprintf, void *f,
                               void *opaque, VMStateField *field,
-                              const char * name, int n_elems, int size)
+                              bool chosen, int n_elems, int size)
 {    
-    if (name) {
+    if (chosen) {
         if (n_elems > 1) {
             for (int i = 0; i < n_elems; i++) {
                 func_fprintf(f, "- <qtailq array el> %s[%i]\n", field->name, i);
@@ -668,7 +685,7 @@ static int get_size(void *opaque, VMStateField *field)
 
 static void Print_information_find_field(fprintf_function func_fprintf, void *f,
                                     void *opaque, VMStateField *field,
-                                    const char * name, bool hex)
+                                    const char *path, bool hex)
 {
     /*name and n_elems = 1*/
     int size = get_size(opaque, field);
@@ -677,7 +694,7 @@ static void Print_information_find_field(fprintf_function func_fprintf, void *f,
         opaque = per_printf_data_pointer(opaque);
     }
     if ((field->flags & VMS_STRUCT) || (field->flags & VMS_VSTRUCT)) { 
-        per_printf_data_struct(func_fprintf, f, field, opaque, name, hex);
+        per_printf_data_struct(func_fprintf, f, field, opaque, path, hex);
     } else if ((!strcmp(field->info->name, "str")) ||
                (!strcmp(field->info->name, "int8")) || 
                (!strcmp(field->info->name, "int16")) ||
@@ -712,20 +729,20 @@ static void Print_information_find_field(fprintf_function func_fprintf, void *f,
 
 static void Print_information_fields(fprintf_function func_fprintf, void *f,
                                      void *opaque, VMStateField *field,
-                                     const char * name, bool hex)
+                                     const char *path, bool chosen, bool hex)
 {
     int n_elems = vmstate_n_elems(opaque, field);
     int size = get_size(opaque, field);
 
 
     if (field->flags & VMS_POINTER) {
-        opaque = per_printf_pointer(func_fprintf, f, opaque, field, name);
+        opaque = per_printf_pointer(func_fprintf, f, opaque, field, chosen);
     } 
     if (field->flags & VMS_ARRAY_OF_POINTER) {
-        opaque = per_printf_arr_pointer(func_fprintf, f, opaque, field, name, n_elems);
+        opaque = per_printf_arr_pointer(func_fprintf, f, opaque, field, chosen, n_elems);
     } 
     if ((field->flags & VMS_STRUCT) ||  (field->flags & VMS_VSTRUCT)) {
-        per_printf_struct(func_fprintf, f, field, opaque, name, n_elems, hex);
+        per_printf_struct(func_fprintf, f, opaque, field, path, chosen, n_elems, hex);
     } else {
         if ((!strcmp(field->info->name, "str")) ||
             (!strcmp(field->info->name, "int8")) ||
@@ -734,28 +751,28 @@ static void Print_information_fields(fprintf_function func_fprintf, void *f,
             (!strcmp(field->info->name, "int64")) ||
             (!strcmp(field->info->name, "float64")) ||
             (!strcmp(field->info->name, "int32 le"))) {
-            per_printf_basic(func_fprintf, f, opaque, field, name, n_elems, hex, true);
+            per_printf_basic(func_fprintf, f, opaque, field, chosen, n_elems, hex, true);
         } else if ((!strcmp(field->info->name, "uint8")) ||
                    (!strcmp(field->info->name, "uint16")) ||
                    (!strcmp(field->info->name, "uint32")) ||
                    (!strcmp(field->info->name, "uint64"))) {
-            per_printf_basic(func_fprintf, f, opaque, field, name, n_elems, hex, false);
+            per_printf_basic(func_fprintf, f, opaque, field, chosen, n_elems, hex, false);
         } else if (!strcmp(field->info->name, "int32 equal")) {
-            per_printf_basic(func_fprintf, f, opaque, field, name, n_elems, hex, true);
+            per_printf_int_equal(func_fprintf, f, opaque, field, chosen, n_elems, hex, true);
         } else if ((!strcmp(field->info->name, "uint8 equal")) ||
                    (!strcmp(field->info->name, "uint16 equal")) ||
                    (!strcmp(field->info->name, "uint32 equal")) ||
                    (!strcmp(field->info->name, "uint64 equal"))) {
-            per_printf_int_equal(func_fprintf, f, opaque, field, name, n_elems, hex, false);
+            per_printf_int_equal(func_fprintf, f, opaque, field, chosen, n_elems, hex, false);
         } else if ((!strcmp(field->info->name, "CPU_Double_U")) ||
                    (!strcmp(field->info->name, "timer"))) {
-            per_printf_CPUDouble_timer(func_fprintf, f, opaque, field, name, n_elems, hex);
+            per_printf_CPUDouble_timer(func_fprintf, f, opaque, field, chosen, n_elems, hex);
         } else if ((!strcmp(field->info->name,"buffer")) ||
                   (!strcmp(field->info->name,"unused_buffer")) ||
                   (!strcmp(field->info->name,"bitmap"))) {
-           per_printf_buffer_bitmap(func_fprintf, f, opaque, field, name, n_elems, size, hex);
+           per_printf_buffer_bitmap(func_fprintf, f, opaque, field, chosen, n_elems, size, hex);
         } else if (!strcmp(field->info->name,"qtailq")) {
-            per_printf_qtailq(func_fprintf, f, opaque, field, name, n_elems, size);
+            per_printf_qtailq(func_fprintf, f, opaque, field, chosen, n_elems, size);
         }
     }
     return;
@@ -766,10 +783,11 @@ void vmsd_data(fprintf_function func_fprintf, void *f, const char* path,
                const VMStateDescription *vmsd, void *opaque, bool hex)
 {
     if (!path) {
+        /*show all fields of the current field*/
         VMStateField *field = vmsd->fields;
         while (field->name != NULL) {
             void* curr_elem = opaque + field->offset;
-            Print_information_fields(func_fprintf, f, curr_elem, field, NULL, hex);
+            Print_information_fields(func_fprintf, f, curr_elem, field, path, false, hex);
             field++;
         }
 
@@ -784,9 +802,9 @@ void vmsd_data(fprintf_function func_fprintf, void *f, const char* path,
         return;
     }
 
-    if (!path && name) {
-        path = name;
-    }
+    // if (!path && name) {
+    //     path = name;
+    // }
 
     VMStateField *field = vmsd->fields;
     while (field->name != NULL) {
@@ -795,7 +813,7 @@ void vmsd_data(fprintf_function func_fprintf, void *f, const char* path,
             if (ind != INDEMPTY) {
                 int n_elems = vmstate_n_elems(curr_elem, field);
                 if (n_elems > 1) {
-                    /*array*/
+                    /*сoncret array field*/
                     if (ind >= n_elems) {
                         func_fprintf(f, "Invalid field index received\n");
                         return;
@@ -816,7 +834,8 @@ void vmsd_data(fprintf_function func_fprintf, void *f, const char* path,
                     func_fprintf(f, "this field cannot be accessed by index\n");
                 }
             } else {
-                Print_information_fields(func_fprintf, f, curr_elem, field, path, hex);
+                /*field without index*/
+                Print_information_fields(func_fprintf, f, curr_elem, field, path, true, hex);
             }
             return;
         }
