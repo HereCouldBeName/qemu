@@ -360,14 +360,12 @@ static char* per_printf_data_value(void* opaque, VMStateField *field,
                (!strcmp(field->info->name, "uint64 equal")))) {
         uval = *(uint64_t *)opaque;          
     } else if (!strcmp(field->info->name, "float64")) {
-        if (!asprintf(&buff, "%li", *(float64 *)opaque)) {
-            /*ERROR*/
+        if (asprintf(&buff, "%li", *(float64 *)opaque) == -1) {
             return NULL;
         }
         return buff;
     } else if (!strcmp(field->info->name, "str")) {
-        if (!asprintf(&buff, "%s", (char *)opaque)) {
-            /*ERROR*/
+        if (asprintf(&buff, "%s", (char *)opaque) == -1) {
             return NULL;
         }
         return buff;
@@ -375,25 +373,21 @@ static char* per_printf_data_value(void* opaque, VMStateField *field,
 
     if (sign) {
         if (hex) {
-            if (!asprintf(&buff, "%#lx", val)) {
-                /*ERROR*/
+            if (asprintf(&buff, "%#lx", val) == -1) {
                 return NULL;
             }
         } else {
-            if (!asprintf(&buff, "%li", val)) {
-                /*ERROR*/
+            if (asprintf(&buff, "%li", val) == -1) {
                 return NULL;
             }
         }
     } else {
         if (hex) {
-            if (!asprintf(&buff, "%#lx", uval)) {
-                /*ERROR*/
+            if (asprintf(&buff, "%#lx", uval) == -1) {
                 return NULL;
             }
         } else {
-            if (!asprintf(&buff, "%li", uval)) {
-                /*ERROR*/
+            if (asprintf(&buff, "%li", uval) == -1) {
                 return NULL;
             }
         }
@@ -411,7 +405,7 @@ static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
     if (buff) {
         func_fprintf(f, "- <%s> %s %s\n", field->info->name, field->name, buff);
     } else {
-        /*printf error*/
+        error_report("sufficient space cannot be allocated");
     }
     free(buff);
 }
@@ -430,7 +424,7 @@ static void per_printf_basic(fprintf_function func_fprintf, void *f, void* opaqu
                     func_fprintf(f, "- <Array %s el> %s[%i] %s\n", field->info->name, field->name, i, buff);
                 }
                 else {
-                    /*printf error*/
+                    error_report("sufficient space cannot be allocated");
                 }
                 free(buff);
                 opaque += size;
