@@ -310,12 +310,13 @@ static void* per_printf_arr_pointer(fprintf_function func_fprintf, void *f,
 
 /*int, float, str*/
 
-static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
-                                  void* opaque, VMStateField *field,
+static char* per_printf_data_value(void* opaque, VMStateField *field,
                                   bool hex, bool sign)
 {
     int64_t val = 0;
     uint64_t uval = 0;
+
+    char* buff;
 
     if (sign && !strcmp(field->info->name, "int8")) { 
         val = (int64_t)*(int8_t *)opaque;
@@ -342,26 +343,60 @@ static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
                (!strcmp(field->info->name, "uint64 equal")))) {
         uval = *(uint64_t *)opaque;          
     } else if (!strcmp(field->info->name, "float64")) {
-        func_fprintf(f, "- <%s> %s %li\n", field->info->name, field->name, *(float64 *)opaque);
-        return;
+        if (!asprintf(&buff, "%li", *(float64 *)opaque)) {
+            /*ERROR*/
+            return NULL;
+        }
+        return buff;
     } else if (!strcmp(field->info->name, "str")) {
-        func_fprintf(f, "- <%s> %s %s\n", field->info->name, field->name, (char *)opaque);
-        return;
+        if (!asprintf(&buff, "%s", (char *)opaque)) {
+            /*ERROR*/
+            return NULL;
+        }
+        return buff;
     }
 
     if (sign) {
         if (hex) {
-            func_fprintf(f, "- <%s> %s %#lx\n", field->info->name, field->name, val);
+            if (!asprintf(&buff, "%#lx", val)) {
+                /*ERROR*/
+                return NULL;
+            }
         } else {
-            func_fprintf(f, "- <%s> %s %li\n", field->info->name, field->name, val);
+            if (!asprintf(&buff, "%li", val)) {
+                /*ERROR*/
+                return NULL;
+            }
         }
     } else {
         if (hex) {
-            func_fprintf(f, "- <%s> %s %#lx\n", field->info->name, field->name, uval);
+            if (!asprintf(&buff, "%#lx", uval)) {
+                /*ERROR*/
+                return NULL;
+            }
         } else {
-            func_fprintf(f, "- <%s> %s %li\n", field->info->name, field->name, uval);
+            if (!asprintf(&buff, "%li", uval)) {
+                /*ERROR*/
+                return NULL;
+            }
         }
     }
+    return buff;
+}
+
+
+
+static void per_printf_data_basic(fprintf_function func_fprintf, void *f,
+                                  void* opaque, VMStateField *field,
+                                  bool hex, bool sign)
+{
+    char* buff = per_printf_data_value(opaque, field, hex, sign);
+    if (buff) {
+        func_fprintf(f, "- <%s> %s %s\n", field->info->name, field->name, buff);
+    } else {
+        /*printf error*/
+    }
+    free(buff);
 }
 
 
@@ -371,8 +406,17 @@ static void per_printf_basic(fprintf_function func_fprintf, void *f, void* opaqu
 {
     if (n_elems > 1) {
         if (name) {
-            for (int i=0; i < n_elems; i++) {
-                func_fprintf(f, "- <Array %s el> %s[%i]\n", field->info->name, field->name, i);
+            int size = vmstate_size(opaque, field);
+            for (int i=0; i < n_elems; i++) {        
+                char* buff = per_printf_data_value(opaque, field, hex, sign);
+                if (buff) {
+                    func_fprintf(f, "- <Array %s el> %s[%i] %s\n", field->info->name, field->name, i, buff);
+                }
+                else {
+                    /*printf error*/
+                }
+                free(buff);
+                opaque += size;
             }
         } else {
            func_fprintf(f, "- <Array %s> %s\n", field->info->name, field->name); 
