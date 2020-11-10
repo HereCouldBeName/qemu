@@ -176,12 +176,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
 
 #define BITS_TO_U64S(nr) DIV_ROUND_UP(nr, 64)
 
-static void show_help_msg(fprintf_function func_fprintf, void *f, const char* name, int size)
-{
-    func_fprintf(f, "\nIf you want to see a concret element"
-                 " you need to entered %s[i], where i = {0...%i}\n",name, size-1);
-}
-
 #define INDERROR -1
 #define INDEMPTY -2
 
@@ -470,6 +464,7 @@ static void per_printf_data_CPUDouble_timer(fprintf_function func_fprintf, void 
         }
 
     } else if (!strcmp(field->info->name, "timer")) {
+        /*not full functionality*/
         QEMUTimer elem = *(QEMUTimer *)opaque;
         if (hex) {
             func_fprintf(f, "- <QEMUTimer el> expire_time: %#lx\n", elem.expire_time);
@@ -508,29 +503,27 @@ static void per_printf_CPUDouble_timer(fprintf_function func_fprintf, void *f, v
 static void per_printf_data_arr_buffer_bitmap(fprintf_function func_fprintf, void *f,
                     void* opaque, VMStateField *field, int size, bool hex)
 {
+    
     if (!strcmp(field->info->name, "buffer") ||
         !strcmp(field->info->name, "unused_buffer")) {
-        uint8_t *buf = (uint8_t *)opaque;
-        if (hex) {
-            for (long i = 0; i < size; i++) {
-                func_fprintf(f, "%#x ", buf[i]);
-            } 
-        } else {
-            for (long i = 0; i < size; i++) {
-                func_fprintf(f, "%i ", buf[i]);
-            } 
+        uint8_t *buf = (uint8_t *)opaque; 
+        for (long i = 0; i < size; i++) {
+            if (hex) {
+                func_fprintf(f, "- <%s> %s[%li] %#x\n", field->info->name, field->name, i, buf[i]);
+            } else {
+                func_fprintf(f, "- <%s> %s[%li] %i\n", field->info->name, field->name, i, buf[i]);
+            }
         }
     } else if(!strcmp(field->info->name,"bitmap")) {
         unsigned long *bmp = (unsigned long *)opaque;
         for(long i = 0; i < size; i++) {
-            func_fprintf(f, "%i ", test_bit(i,bmp));
+            if (hex) {
+                func_fprintf(f, "- <%s> %s[%li] %#x\n", field->info->name, field->name, i, test_bit(i,bmp));
+            } else {
+                func_fprintf(f, "- <%s> %s[%li] %i\n", field->info->name, field->name, i, test_bit(i,bmp));
+            }
         }
     }
-
-    func_fprintf(f,"\n");
-    
-    show_help_msg(func_fprintf, f, field->name, size);
-
     return;
 }
 
