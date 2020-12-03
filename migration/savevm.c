@@ -2531,7 +2531,7 @@ void find_device(fprintf_function func_fprintf, void *f) {
 
 
 const char* get_name(const char** path) {
-    const char *p = strchr(*path, '/');
+    const char *p = strchr(*path, '\\');
     if(p) {
         uint16_t len  = p - *path;
         char* name = malloc(len + 1);

@@ -319,7 +319,7 @@ static void* per_printf_arr_pointer(fprintf_function func_fprintf, void *f,
     return opaque;
 }
 
-/*int, float, str*/
+/*bool, int, float, str*/
 
 static char* per_printf_data_value(void* opaque, VMStateField *field,
                                   bool hex, bool sign)
@@ -745,7 +745,8 @@ static void Print_information_fields(fprintf_function func_fprintf, void *f,
             (!strcmp(field->info->name, "float64")) ||
             (!strcmp(field->info->name, "int32 le"))) {
             per_printf_basic(func_fprintf, f, opaque, field, chosen, n_elems, hex, true);
-        } else if ((!strcmp(field->info->name, "uint8")) ||
+        } else if ((!strcmp(field->info->name, "bool"))   ||
+                   (!strcmp(field->info->name, "uint8")) ||
                    (!strcmp(field->info->name, "uint16")) ||
                    (!strcmp(field->info->name, "uint32")) ||
                    (!strcmp(field->info->name, "uint64"))) {
