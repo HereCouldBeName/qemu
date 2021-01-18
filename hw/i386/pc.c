@@ -75,6 +75,10 @@
 #include "hw/i386/intel_iommu.h"
 #include "hw/net/ne2000-isa.h"
 
+
+#include "exec/gdbstub.h"
+
+
 /* debug PC/ISA interrupts */
 //#define DEBUG_IRQ
 
@@ -111,6 +115,14 @@ struct hpet_fw_config hpet_cfg = {.count = UINT8_MAX};
 
 void gsi_handler(void *opaque, int n, int level)
 {
+
+    if (gdbserver_is_running()) {
+        printf("Why I'm not here?\n");
+        const uint8_t* buf = (const uint8_t*)("Some text here and good by\n");
+        vm_stop_irq(buf);
+    }
+
+
     GSIState *s = opaque;
 
     DPRINTF("pc: %s GSI %d\n", level ? "raising" : "lowering", n);

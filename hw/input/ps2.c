@@ -274,6 +274,8 @@ static void ps2_put_keycode(void *opaque, int keycode)
 static void ps2_keyboard_event(DeviceState *dev, QemuConsole *src,
                                InputEvent *evt)
 {
+    vm_stop(RUN_STATE_PAUSED);
+    printf("NORM PUSH BUTTON!!!\n\n\n\n");
     PS2KbdState *s = (PS2KbdState *)dev;
     InputKeyEvent *key = evt->u.key.data;
     int qcode;

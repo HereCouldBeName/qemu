@@ -38,6 +38,8 @@
 
 #include "chardev/char-mux.h"
 
+#include "exec/gdbstub.h"
+
 /***********************************************************/
 /* character device */
 
@@ -171,8 +173,38 @@ void qemu_chr_be_write_impl(Chardev *s, uint8_t *buf, int len)
 {
     CharBackend *be = s->be;
 
+    //printf("Label: %s\n", s->label);
+    //printf("FILE NAME: %s\n", s->filename);
+
     if (be && be->chr_read) {
         be->chr_read(be->opaque, buf, len);
+        
+        /*TODO is VM debug?*/
+        //if (device_configs)
+        
+        int n_serial = serial_max_hds();
+
+        bool is_serial = false;
+
+        for (int i=0; i < n_serial; i++) {
+            if (serial_hd(i) == s) {
+                //printf("!!!!! I = %p and s = %p", (void*)i, (void*)s);
+                is_serial = true;
+                break;
+            }
+        }
+
+        if (gdbserver_is_running() && is_serial) {
+            vm_stop(RUN_STATE_PAUSED);
+        }
+
+        // if (gdbserver_is_running()) {
+        //     for (int i=0; i<len; i++) {
+        //                     printf("%c ", buf[i]);
+        //     }
+        //     printf("\n");
+        //     vm_stop(RUN_STATE_PAUSED);
+        // }
     }
 }
 
@@ -715,6 +747,7 @@ Chardev *qemu_chr_new(const char *label, const char *filename)
     chr = qemu_chr_new_noreplay(label, filename);
     if (chr) {
         if (replay_mode != REPLAY_MODE_NONE) {
+            //printf("LABEL: %s, Replay true\n", label);
             qemu_chr_set_feature(chr, QEMU_CHAR_FEATURE_REPLAY);
         }
         if (qemu_chr_replay(chr) && CHARDEV_GET_CLASS(chr)->chr_ioctl) {
@@ -723,6 +756,7 @@ Chardev *qemu_chr_new(const char *label, const char *filename)
         }
         replay_register_char_driver(chr);
     }
+    //printf("LABEL: %s, Replay don't know\n", label);
     return chr;
 }
 

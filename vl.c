@@ -583,6 +583,9 @@ static RunState current_run_state = RUN_STATE_PRECONFIG;
 
 /* We use RUN_STATE__MAX but any invalid value will do */
 static RunState vmstop_requested = RUN_STATE__MAX;
+
+static const uint8_t *vmstop_irq_buff = NULL;
+
 static QemuMutex vmstop_lock;
 
 typedef struct {
@@ -741,6 +744,12 @@ int runstate_is_running(void)
     return runstate_check(RUN_STATE_RUNNING);
 }
 
+int runstate_is_debugging(void)
+{
+    printf("state = %d and need = %d\n", RUN_STATE_DEBUG, current_run_state);
+    return runstate_check(RUN_STATE_DEBUG);
+}
+
 bool runstate_needs_reset(void)
 {
     return runstate_check(RUN_STATE_INTERNAL_ERROR) ||
@@ -756,6 +765,24 @@ StatusInfo *qmp_query_status(Error **errp)
     info->status = current_run_state;
 
     return info;
+}
+
+bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf)
+{
+    qemu_mutex_lock(&vmstop_lock);
+    *r = vmstop_requested;
+    vmstop_requested = RUN_STATE__MAX;
+
+    printf("RunState r = %d\n", *r);
+
+    if (*r == RUN_STATE_IRQ) {
+        *buf = vmstop_irq_buff;
+        vmstop_irq_buff = NULL;
+    }
+
+    qemu_mutex_unlock(&vmstop_lock);
+    printf("buf = %s and vmstop_irq_buff = %s\n", *buf, vmstop_irq_buff);
+    return *buf != NULL;
 }
 
 bool qemu_vmstop_requested(RunState *r)
@@ -778,6 +805,14 @@ void qemu_system_vmstop_request(RunState state)
     qemu_mutex_unlock(&vmstop_lock);
     qemu_notify_event();
 }
+
+void qemu_system_vmstop_irq(const uint8_t *buf)
+{
+    vmstop_irq_buff = buf;
+    printf("Set state\n");
+    qemu_system_vmstop_request(RUN_STATE_IRQ);
+}
+
 
 /***********************************************************/
 /* real time host monotonic timer */
@@ -1801,6 +1836,7 @@ void qemu_system_debug_request(void)
 static bool main_loop_should_exit(void)
 {
     RunState r;
+    const uint8_t *buf = NULL;
     ShutdownCause request;
 
     if (preconfig_exit_requested) {
@@ -1848,6 +1884,13 @@ static bool main_loop_should_exit(void)
     if (qemu_powerdown_requested()) {
         qemu_system_powerdown();
     }
+
+    if(qemu_vmstop_irqed(&r, &buf)) {
+        //printf("buf in qemu_vmstop_irqed = %s  and buff addr = 0x%p\n", buf, (void*)buf);
+        vm_stop_irq(buf);
+        return false;
+    }
+
     if (qemu_vmstop_requested(&r)) {
         vm_stop(r);
     }

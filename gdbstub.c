@@ -916,6 +916,9 @@ static int is_query_packet(const char *p, const char *query, char separator)
  */
 static int gdb_handle_vcont(GDBState *s, const char *p)
 {
+    printf("%s\n", p);
+
+
     int res, idx, signal = 0;
     char cur_action;
     char *newstates;
@@ -1017,6 +1020,8 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
 
     trace_gdbstub_io_command(line_buf);
 
+    //printf("%s\n", line_buf);
+
     p = line_buf;
     ch = *p++;
     switch(ch) {
@@ -1054,6 +1059,8 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
             }
 
             res = gdb_handle_vcont(s, p);
+
+            printf("Buffer obrabotan\n");
 
             if (res) {
                 if ((res == -EINVAL) || (res == -ERANGE)) {
@@ -1135,21 +1142,27 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
         break;
     case 'm':
         addr = strtoull(p, (char **)&p, 16);
+        //printf("addr:= %lu\n", (uint64_t)addr);
         if (*p == ',')
             p++;
         len = strtoull(p, NULL, 16);
+        //printf("len:= %lu\n", (uint64_t)len);
 
         /* memtohex() doubles the required space */
         if (len > MAX_PACKET_LENGTH / 2) {
+            //printf("Error 22\n");
             put_packet (s, "E22");
             break;
         }
 
         if (target_memory_rw_debug(s->g_cpu, addr, mem_buf, len, false) != 0) {
+            //printf("Error 14\n");
             put_packet (s, "E14");
         } else {
+            //printf("OKEY\n");
             memtohex(buf, mem_buf, len);
             put_packet(s, buf);
+            //printf("tmp := %i\n", tmp);
         }
         break;
     case 'M':
@@ -1417,6 +1430,20 @@ void gdb_set_stop_cpu(CPUState *cpu)
 }
 
 #ifndef CONFIG_USER_ONLY
+
+void gdb_send_irq(const uint8_t *buf)
+{
+    printf("I'm here buf is = %s\n", buf);
+    
+    GDBState *s = gdbserver_state;
+    CPUState *cpu = s->c_cpu;
+
+    put_packet(s, (const char *)buf);
+
+    /* disable single step if it was enabled */
+    cpu_single_step(cpu, 0);
+}
+
 static void gdb_vm_state_change(void *opaque, int running, RunState state)
 {
     GDBState *s = gdbserver_state;
@@ -1425,16 +1452,27 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
     const char *type;
     int ret;
 
+    printf("Step one\n");
+
     if (running || s->state == RS_INACTIVE) {
         return;
     }
+
+    printf("Step two\n");
+
     /* Is there a GDB syscall waiting to be sent?  */
     if (s->current_syscall_cb) {
         put_packet(s, s->syscall_buf);
         return;
     }
+
+    printf("Step three\n");
+
+    printf("state in change = %d\n", state);
+
     switch (state) {
     case RUN_STATE_DEBUG:
+        //printf("RUN_STATE_DEBUG!\n");
         if (cpu->watchpoint_hit) {
             switch (cpu->watchpoint_hit->flags & BP_MEM_ACCESS) {
             case BP_MEM_READ:
@@ -1449,6 +1487,12 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
             }
             trace_gdbstub_hit_watchpoint(type, cpu_gdb_index(cpu),
                     (target_ulong)cpu->watchpoint_hit->vaddr);
+
+            printf("T%02xthread:%02x;%swatch:" TARGET_FMT_lx "; \n",
+                     GDB_SIGNAL_TRAP, cpu_gdb_index(cpu), type,
+                     (target_ulong)cpu->watchpoint_hit->vaddr);  
+
+
             snprintf(buf, sizeof(buf),
                      "T%02xthread:%02x;%swatch:" TARGET_FMT_lx ";",
                      GDB_SIGNAL_TRAP, cpu_gdb_index(cpu), type,
@@ -1462,44 +1506,60 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
         ret = GDB_SIGNAL_TRAP;
         break;
     case RUN_STATE_PAUSED:
+        //printf("RUN_STATE_PAUSED!\n");
         trace_gdbstub_hit_paused();
         ret = GDB_SIGNAL_INT;
         break;
     case RUN_STATE_SHUTDOWN:
+        //printf("RUN_STATE_SHUTDOWN!\n");
         trace_gdbstub_hit_shutdown();
         ret = GDB_SIGNAL_QUIT;
         break;
     case RUN_STATE_IO_ERROR:
+        //printf("RUN_STATE_IO_ERROR!\n");
         trace_gdbstub_hit_io_error();
         ret = GDB_SIGNAL_IO;
         break;
     case RUN_STATE_WATCHDOG:
+        //printf("RUN_STATE_WATCHDOG!\n");
         trace_gdbstub_hit_watchdog();
         ret = GDB_SIGNAL_ALRM;
         break;
     case RUN_STATE_INTERNAL_ERROR:
+        //printf("RUN_STATE_INTERNAL_ERROR!\n");
         trace_gdbstub_hit_internal_error();
         ret = GDB_SIGNAL_ABRT;
         break;
     case RUN_STATE_SAVE_VM:
     case RUN_STATE_RESTORE_VM:
+        //printf("RUN_STATE_RESTORE_VM!\n");
         return;
     case RUN_STATE_FINISH_MIGRATE:
+        //printf("RUN_STATE_FINISH_MIGRATE!\n");
         ret = GDB_SIGNAL_XCPU;
         break;
+    // case RUN_STATE_IRQ:
+    //     printf("TESTING 12345678");
+    //     break;
     default:
+        //printf("Defualt!\n");
         trace_gdbstub_hit_unknown(state);
         ret = GDB_SIGNAL_UNKNOWN;
         break;
     }
+    printf("T%02xthread:%02x;\n", ret, cpu_gdb_index(cpu));
     gdb_set_stop_cpu(cpu);
     snprintf(buf, sizeof(buf), "T%02xthread:%02x;", ret, cpu_gdb_index(cpu));
 
 send_packet:
+    printf("%s\n", buf);
     put_packet(s, buf);
+
+    //vm_stop(RUN_STATE_IRQ);
 
     /* disable single step if it was enabled */
     cpu_single_step(cpu, 0);
+
 }
 #endif
 
@@ -1970,6 +2030,9 @@ static int gdb_monitor_write(Chardev *chr, const uint8_t *buf, int len)
         p += max_sz;
         len -= max_sz;
     }
+
+    printf("%s\n", buf);
+
     return len;
 }
 
@@ -2078,6 +2141,15 @@ void gdbserver_cleanup(void)
 {
     if (gdbserver_state) {
         put_packet(gdbserver_state, "W00");
+    }
+}
+
+bool gdbserver_is_running(void)
+{
+    if (gdbserver_state) {
+        return true;
+    } else {
+        return false;
     }
 }
 

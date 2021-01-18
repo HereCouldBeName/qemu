@@ -29,11 +29,12 @@
 
 static int avr_usart_can_receive(void *opaque)
 {
-    AvrUsartState *s = opaque;
-    if (!(s->ucsra & UCSRA_RXC)) {
-        return 1;
-    }
-    return 0;
+    // AvrUsartState *s = opaque;
+    // if (!(s->ucsra & UCSRA_RXC)) {
+    //     return 1;
+    // }
+    // return 0;
+    return 1;
 }
 
 static void avr_usart_receive(void *opaque, const uint8_t *buf, int size)
@@ -50,6 +51,7 @@ static void avr_usart_receive(void *opaque, const uint8_t *buf, int size)
     if (s->ucsrb & UCSRB_TXCIE) {
         qemu_set_irq(s->irq, 1);
     }
+    //printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 }
 
 static void avr_usart_reset(DeviceState *dev)
@@ -123,7 +125,7 @@ void avr_usart_write(AvrUsartState *s, hwaddr addr,
             ch = value;
             /* XXX this blocks entire thread. Rewrite to use
              * qemu_chr_fe_write and background I/O callbacks */
-            qemu_chr_fe_write_all(&s->chr, &ch, 1);
+            qemu_chr_fe_write_all(&s->chr, &ch, size);
             s->ucsra |= UCSRA_RXC;
         }
         return;
@@ -146,6 +148,24 @@ void avr_usart_write(AvrUsartState *s, hwaddr addr,
     }
 }
 
+static const VMStateDescription vmstate_avr_usart = {
+    .name = "avr-usart",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_UINT32(udr, AvrUsartState),
+        VMSTATE_UINT32(ucsra, AvrUsartState),
+        VMSTATE_UINT32(ucsrc, AvrUsartState),
+        VMSTATE_UINT32(ubrrh, AvrUsartState),
+        VMSTATE_UINT32(ubrrl, AvrUsartState),
+
+        VMSTATE_BOOL(switch_reg, AvrUsartState),
+
+        VMSTATE_END_OF_LIST()
+    }
+};
+
+
 static Property avr_usart_properties[] = {
     DEFINE_PROP_CHR("chardev", AvrUsartState, chr),
     DEFINE_PROP_END_OF_LIST(),
@@ -165,6 +185,7 @@ static void avr_usart_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->reset = avr_usart_reset;
+    dc->vmsd = &vmstate_avr_usart;
     dc->props = avr_usart_properties;
     dc->realize = avr_usart_realize;
 }

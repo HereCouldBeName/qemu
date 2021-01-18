@@ -21,6 +21,7 @@ extern bool qemu_uuid_set;
 bool runstate_check(RunState state);
 void runstate_set(RunState new_state);
 int runstate_is_running(void);
+int runstate_is_debugging(void);
 bool runstate_needs_reset(void);
 bool runstate_store(char *str, size_t size);
 typedef struct vm_change_state_entry VMChangeStateEntry;
@@ -59,6 +60,9 @@ static inline bool shutdown_caused_by_guest(ShutdownCause cause)
 void vm_start(void);
 int vm_prepare_start(void);
 int vm_stop(RunState state);
+
+int vm_stop_irq(const uint8_t *buf);
+
 int vm_stop_force_state(RunState state);
 int vm_shutdown(void);
 
@@ -82,8 +86,14 @@ void qemu_system_powerdown_request(void);
 void qemu_register_powerdown_notifier(Notifier *notifier);
 void qemu_system_debug_request(void);
 void qemu_system_vmstop_request(RunState reason);
+
+void qemu_system_vmstop_irq(const uint8_t *buf);
+
 void qemu_system_vmstop_request_prepare(void);
 bool qemu_vmstop_requested(RunState *r);
+
+bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf);
+
 ShutdownCause qemu_shutdown_requested_get(void);
 ShutdownCause qemu_reset_requested_get(void);
 void qemu_system_killed(int signal, pid_t pid);
