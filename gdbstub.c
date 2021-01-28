@@ -1485,7 +1485,7 @@ void gdb_send_irq(const uint8_t *buf)
 
     char buff[256];
     gdb_set_stop_cpu(cpu);
-    snprintf(buff, sizeof(buff), "T%02xthread:%02x;", GDB_SIGNAL_INT, cpu_gdb_index(cpu));
+    snprintf(buff, sizeof(buff), "T%02xthread:%02x;", RUN_STATE_IRQ, cpu_gdb_index(cpu));
     printf("%s\n", buff);
     put_packet(s, buff);
 
