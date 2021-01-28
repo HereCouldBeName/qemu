@@ -80,7 +80,7 @@ void atmega8_twi_write(Atmega8TWIState *s, hwaddr addr,
             if (s->twcr & TWINT) {
                 if(s->twcr & TWSTA) {
                     s->start = true;
-                    qemu_log("START\n");
+                    //qemu_log("START\n");
                 }
                 else if(s->twcr & TWSTO) {
                     s->start = false;
@@ -106,7 +106,7 @@ void atmega8_twi_write(Atmega8TWIState *s, hwaddr addr,
             i2c_send(s->bus, s->twdr);
             //printf("SEND DATE TWI %x\n", s->twdr);
         }
-        qemu_log("VALUE WRITE !!! %lx\n TWCR IS: ", value);
+        //qemu_log("VALUE WRITE !!! %lx\n TWCR IS: ", value);
         break;
     default:
         printf("ERROR: Bad write offset 0x%x\n", (unsigned int)addr);

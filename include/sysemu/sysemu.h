@@ -90,9 +90,9 @@ void qemu_system_vmstop_request(RunState reason);
 void qemu_system_vmstop_irq(const uint8_t *buf);
 
 void qemu_system_vmstop_request_prepare(void);
-bool qemu_vmstop_requested(RunState *r);
+bool qemu_vmstop_requested(RunState *r, const uint8_t **buf);
 
-bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf);
+//bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf);
 
 ShutdownCause qemu_shutdown_requested_get(void);
 ShutdownCause qemu_reset_requested_get(void);

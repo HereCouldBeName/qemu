@@ -117,8 +117,8 @@ void gsi_handler(void *opaque, int n, int level)
 {
 
     if (gdbserver_is_running()) {
-        printf("Why I'm not here?\n");
-        const uint8_t* buf = (const uint8_t*)("Some text here and good by\n");
+        printf("Send Irq (GSI_HANDLER)\n");
+        const uint8_t* buf = (const uint8_t*)("Some text here and good by test txt");
         vm_stop_irq(buf);
     }
 

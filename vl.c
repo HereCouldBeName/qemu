@@ -767,13 +767,38 @@ StatusInfo *qmp_query_status(Error **errp)
     return info;
 }
 
-bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf)
+// bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf)
+// {
+//     printf("faile\n");
+//     qemu_mutex_lock(&vmstop_lock);
+//     *r = vmstop_requested;
+//     vmstop_requested = RUN_STATE__MAX;
+
+//     //printf("RunState r = %d\n", *r);
+
+//     if (*r == RUN_STATE_IRQ) {
+//         *buf = vmstop_irq_buff;
+//         vmstop_irq_buff = NULL;
+//     }
+
+//     qemu_mutex_unlock(&vmstop_lock);
+//     //printf("buf = %s and vmstop_irq_buff = %s\n", *buf, vmstop_irq_buff);
+//     return *buf != NULL;
+// }
+
+bool qemu_vmstop_requested(RunState *r, const uint8_t **buf)
 {
+
+    if(vmstop_requested == 4) {
+        printf("VMSTOP OK\n");
+    }
+
+    if (*r == 4) {
+        printf(" R OK and vmstop_requested = %i\n", vmstop_requested);
+    }
     qemu_mutex_lock(&vmstop_lock);
     *r = vmstop_requested;
     vmstop_requested = RUN_STATE__MAX;
-
-    printf("RunState r = %d\n", *r);
 
     if (*r == RUN_STATE_IRQ) {
         *buf = vmstop_irq_buff;
@@ -781,16 +806,7 @@ bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf)
     }
 
     qemu_mutex_unlock(&vmstop_lock);
-    printf("buf = %s and vmstop_irq_buff = %s\n", *buf, vmstop_irq_buff);
-    return *buf != NULL;
-}
 
-bool qemu_vmstop_requested(RunState *r)
-{
-    qemu_mutex_lock(&vmstop_lock);
-    *r = vmstop_requested;
-    vmstop_requested = RUN_STATE__MAX;
-    qemu_mutex_unlock(&vmstop_lock);
     return *r < RUN_STATE__MAX;
 }
 
@@ -801,7 +817,11 @@ void qemu_system_vmstop_request_prepare(void)
 
 void qemu_system_vmstop_request(RunState state)
 {
+    if (state == 4) {
+        printf("Set state = 4\n");
+    }
     vmstop_requested = state;
+    printf("vmstop = %d\n", vmstop_requested);
     qemu_mutex_unlock(&vmstop_lock);
     qemu_notify_event();
 }
@@ -1885,14 +1905,20 @@ static bool main_loop_should_exit(void)
         qemu_system_powerdown();
     }
 
-    if(qemu_vmstop_irqed(&r, &buf)) {
-        //printf("buf in qemu_vmstop_irqed = %s  and buff addr = 0x%p\n", buf, (void*)buf);
-        vm_stop_irq(buf);
-        return false;
-    }
+    // if(qemu_vmstop_irqed(&r, &buf)) {
+    //     printf("Main exit true...");
+    //     //printf("buf in qemu_vmstop_irqed = %s  and buff addr = 0x%p\n", buf, (void*)buf);
+    //     vm_stop_irq(buf);
+    //     return false;
+    // }
 
-    if (qemu_vmstop_requested(&r)) {
-        vm_stop(r);
+    if (qemu_vmstop_requested(&r, &buf)) {
+        if (buf != NULL) {
+            printf("Main exit true...");
+            vm_stop_irq(buf);
+        } else {
+            vm_stop(r);
+        }
     }
     return false;
 }

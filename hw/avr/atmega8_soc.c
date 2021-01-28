@@ -80,7 +80,7 @@ DeviceState *add_device_to_bus(DeviceState *dev, const char *name, uint8_t addr)
 static uint64_t atmega8_ioreg_read(void *opaque, hwaddr addr,
                                        unsigned int size)
 {
-    qemu_log("READ addres need is 0x%lx\n", addr);
+    //qemu_log("READ addres need is 0x%lx\n", addr);
     Atmega8State *s = opaque;
     switch (addr) {
     case UCSRA:
@@ -105,7 +105,7 @@ static uint64_t atmega8_ioreg_read(void *opaque, hwaddr addr,
 static void atmega8_ioreg_write(void *opaque, hwaddr addr,
                                   uint64_t val64, unsigned int size)
 {
-    qemu_log("WRITE addres need is 0x%lx\n", addr);
+    //qemu_log("WRITE addres need is 0x%lx\n", addr);
     Atmega8State *s = opaque;
     s->usart.switch_reg = false;
     switch (addr) {

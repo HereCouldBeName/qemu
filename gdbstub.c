@@ -1060,7 +1060,7 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
 
             res = gdb_handle_vcont(s, p);
 
-            printf("Buffer obrabotan\n");
+            printf("Buffer obrabotan, res = %i\n", res);
 
             if (res) {
                 if ((res == -EINVAL) || (res == -ERANGE)) {
@@ -1431,14 +1431,67 @@ void gdb_set_stop_cpu(CPUState *cpu)
 
 #ifndef CONFIG_USER_ONLY
 
+static void gdb_irq_output(GDBState *s, const char *msg, int len)
+{
+    char buf[MAX_PACKET_LENGTH];
+
+    //CPUState *cpu = s->c_cpu;
+    //char new_msg[256];
+
+    /*
+     * Отправка двух сообщений - первое - только Irq
+     * Второе - T17thread:%02x
+     * Видимо придется реализовыавать в Cutter цикл ожидания OK
+    */
+
+
+    //snprintf(new_msg, sizeof(new_msg), "%s$T17thread:%02x;", msg, cpu_gdb_index(cpu));
+
+    //printf("MSG is = %s\n", new_msg);
+
+    buf[0] = 'I';
+    if (len > (MAX_PACKET_LENGTH/2) - 1)
+        len = (MAX_PACKET_LENGTH/2) - 1;
+    
+    //memtohex(buf + 1, (uint8_t *)new_msg, strlen(new_msg));
+    memtohex(buf + 1, (uint8_t *)msg, len);
+    put_packet(s, buf);
+}
+
+
 void gdb_send_irq(const uint8_t *buf)
 {
-    printf("I'm here buf is = %s\n", buf);
-    
     GDBState *s = gdbserver_state;
     CPUState *cpu = s->c_cpu;
+    
+    /*TODO
+    * Add some letter for Irq
+    * perhaps, use memtohex
+    */
+    //put_packet(s, (const char *)buf);
 
-    put_packet(s, (const char *)buf);
+
+    int max_sz;
+    const char *p = (const char *)buf;
+    int len = strlen(p);
+
+    max_sz = (sizeof(s->last_packet) - 2) / 2;
+    for (;;) {
+        if (len <= max_sz) {
+            gdb_irq_output(s, p, len);
+            break;
+        }
+        gdb_irq_output(s, p, max_sz);
+        p += max_sz;
+        len -= max_sz;
+    }
+
+    // char buff[256];
+    // snprintf(buff, sizeof(buff), "T%02xthread:%02x;", GDB_SIGNAL_INT, cpu_gdb_index(cpu));
+    // printf("%s\n", buff);
+    // put_packet(s, buff);
+
+    //gdb_irq_output(s, (const char *)buf, strlen((const char *)buf));
 
     /* disable single step if it was enabled */
     cpu_single_step(cpu, 0);
@@ -1452,6 +1505,11 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
     const char *type;
     int ret;
 
+
+    //printf("STATE = %d STOP = %d RUN = %d \n", state, RUN_STATE_RUNNING, RUN_STATE_PAUSED);
+
+
+
     printf("Step one\n");
 
     if (running || s->state == RS_INACTIVE) {
@@ -1462,6 +1520,9 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
 
     /* Is there a GDB syscall waiting to be sent?  */
     if (s->current_syscall_cb) {
+
+        printf("gdb_vm_state_change  - GDB syscall waiting....\n");
+
         put_packet(s, s->syscall_buf);
         return;
     }
@@ -1506,7 +1567,7 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
         ret = GDB_SIGNAL_TRAP;
         break;
     case RUN_STATE_PAUSED:
-        //printf("RUN_STATE_PAUSED!\n");
+        printf("RUN_STATE_PAUSED!\n");
         trace_gdbstub_hit_paused();
         ret = GDB_SIGNAL_INT;
         break;

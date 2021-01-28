@@ -26,6 +26,7 @@
 #include "hw/char/usart_avr.h"
 #include "qemu/log.h"
 #include "exec/address-spaces.h"
+#include "sysemu/sysemu.h"
 
 static int avr_usart_can_receive(void *opaque)
 {
@@ -121,6 +122,12 @@ void avr_usart_write(AvrUsartState *s, hwaddr addr,
         }
         return;
     case UDR:
+        printf("UDR REG SEND IRQ\n");
+        //const uint8_t* buf = (const uint8_t*)("UDR REG SEND IRQ");
+        //vm_stop_irq(buf);
+
+        vm_stop(RUN_STATE_PAUSED);
+
         if (value < 0xF000) {
             ch = value;
             /* XXX this blocks entire thread. Rewrite to use

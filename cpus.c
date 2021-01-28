@@ -1047,6 +1047,8 @@ static int do_vm_stop(RunState state, bool send_stop)
 {
     int ret = 0;
 
+    printf("do_vm_stop....\n");
+
     if (runstate_is_running()) {
         cpu_disable_ticks();
         pause_all_vcpus();
@@ -1056,7 +1058,6 @@ static int do_vm_stop(RunState state, bool send_stop)
             qapi_event_send_stop(&error_abort);
         }
     }
-
 
     // if(runstate_is_running() && state == RUN_STATE_IRQ) {
     //      cpu_disable_ticks();
@@ -2105,6 +2106,7 @@ int vm_stop(RunState state)
          * vm_stop() has been requested.
          */
         cpu_stop_current();
+        printf("STOP THREAD....\n");
         return 0;
     }
 
@@ -2114,8 +2116,11 @@ int vm_stop(RunState state)
 static int do_vm_stop_irq(const uint8_t *buf) {
     int ret = 0;
     if (runstate_is_running()) {
+        printf("runstate ok....\n");
         cpu_disable_ticks();
+        printf("cput disable ok....\n");
         pause_all_vcpus();
+        printf("pause all ok....\n");
         gdb_send_irq(buf);
         qapi_event_send_stop(&error_abort);
     }
@@ -2143,6 +2148,7 @@ int vm_stop_irq(const uint8_t *buf) {
          * vm_stop() has been requested.
          */
         cpu_stop_current();
+        printf("IRQ THREAD....\n");
         return 0;
     }
 
@@ -2159,7 +2165,7 @@ int vm_prepare_start(void)
 {
     RunState requested;
 
-    qemu_vmstop_requested(&requested);
+    qemu_vmstop_requested(&requested, NULL);
     if (runstate_is_running() && requested == RUN_STATE__MAX) {
         return -1;
     }
