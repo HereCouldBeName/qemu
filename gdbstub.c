@@ -916,9 +916,6 @@ static int is_query_packet(const char *p, const char *query, char separator)
  */
 static int gdb_handle_vcont(GDBState *s, const char *p)
 {
-    printf("%s\n", p);
-
-
     int res, idx, signal = 0;
     char cur_action;
     char *newstates;
@@ -1486,12 +1483,11 @@ void gdb_send_irq(const uint8_t *buf)
         len -= max_sz;
     }
 
-    // char buff[256];
-    // snprintf(buff, sizeof(buff), "T%02xthread:%02x;", GDB_SIGNAL_INT, cpu_gdb_index(cpu));
-    // printf("%s\n", buff);
-    // put_packet(s, buff);
-
-    //gdb_irq_output(s, (const char *)buf, strlen((const char *)buf));
+    char buff[256];
+    gdb_set_stop_cpu(cpu);
+    snprintf(buff, sizeof(buff), "T%02xthread:%02x;", GDB_SIGNAL_INT, cpu_gdb_index(cpu));
+    printf("%s\n", buff);
+    put_packet(s, buff);
 
     /* disable single step if it was enabled */
     cpu_single_step(cpu, 0);
@@ -1608,12 +1604,12 @@ static void gdb_vm_state_change(void *opaque, int running, RunState state)
         ret = GDB_SIGNAL_UNKNOWN;
         break;
     }
-    printf("T%02xthread:%02x;\n", ret, cpu_gdb_index(cpu));
+    //printf("packet: T%02xthread:%02x;\n", ret, cpu_gdb_index(cpu));
     gdb_set_stop_cpu(cpu);
     snprintf(buf, sizeof(buf), "T%02xthread:%02x;", ret, cpu_gdb_index(cpu));
 
 send_packet:
-    printf("%s\n", buf);
+    //printf("buffer: %s\n", buf);
     put_packet(s, buf);
 
     //vm_stop(RUN_STATE_IRQ);

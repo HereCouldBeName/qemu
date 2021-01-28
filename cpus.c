@@ -2121,6 +2121,7 @@ static int do_vm_stop_irq(const uint8_t *buf) {
         printf("cput disable ok....\n");
         pause_all_vcpus();
         printf("pause all ok....\n");
+        runstate_set(RUN_STATE_IRQ);
         gdb_send_irq(buf);
         qapi_event_send_stop(&error_abort);
     }

@@ -123,10 +123,10 @@ void avr_usart_write(AvrUsartState *s, hwaddr addr,
         return;
     case UDR:
         printf("UDR REG SEND IRQ\n");
-        //const uint8_t* buf = (const uint8_t*)("UDR REG SEND IRQ");
-        //vm_stop_irq(buf);
+        const uint8_t* buf = (const uint8_t*)("UDR REG SEND IRQ");
+        vm_stop_irq(buf);
 
-        vm_stop(RUN_STATE_PAUSED);
+        //vm_stop(RUN_STATE_PAUSED);
 
         if (value < 0xF000) {
             ch = value;
