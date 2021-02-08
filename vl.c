@@ -829,9 +829,6 @@ void qemu_system_vmstop_request_prepare(void)
 
 void qemu_system_vmstop_request(RunState state)
 {
-    if (state == 4) {
-        printf("Set state = 4\n");
-    }
     vmstop_requested = state;
     printf("vmstop = %d\n", vmstop_requested);
     qemu_mutex_unlock(&vmstop_lock);
@@ -841,7 +838,6 @@ void qemu_system_vmstop_request(RunState state)
 void qemu_system_vmstop_irq(const uint8_t *buf)
 {
     vmstop_irq_buff = buf;
-    printf("Set state\n");
     qemu_system_vmstop_request(RUN_STATE_IRQ);
 }
 

@@ -27,6 +27,9 @@
 #include "hw/irq.h"
 #include "qom/object.h"
 
+#include "exec/gdbstub.h"
+//#include "sysemu/sysemu.h"
+
 #define IRQ(obj) OBJECT_CHECK(struct IRQState, (obj), TYPE_IRQ)
 
 struct IRQState {
@@ -35,12 +38,89 @@ struct IRQState {
     qemu_irq_handler handler;
     void *opaque;
     int n;
+
+    void *callDev;
+    void *parentDev;
+
 };
+
+
+/*CAll*/
+
+const char* qemu_get_irq_call_dev(qemu_irq irq)
+{
+
+    if (irq->callDev) {
+       return object_class_get_name(object_get_class(OBJECT(irq->callDev)));  
+    } 
+    return NULL;
+}
+
+void qemu_set_irq_call_dev(qemu_irq irq, void *opaque)
+{
+    if (!irq)
+        return;
+
+    irq->callDev = opaque;
+}
+
+
+/*Parent*/
+const char* qemu_get_irq_parent_dev(qemu_irq irq)
+{
+    if (irq->parentDev) {
+       return object_class_get_name(object_get_class(OBJECT(irq->parentDev)));  
+    } 
+    return NULL;
+}
+void qemu_set_irq_parent_dev(qemu_irq* irq, void *opaque, int n)
+{
+    if (!irq)
+        return;
+    
+    //irq->parentDev = opaque;
+
+
+    for (int i = 0; i < n; i++) {
+        irq[i]->parentDev = opaque;
+    }
+
+}
+// void qemu_set_irq_parent_dev(qemu_irq irq, void *opaque)
+// {
+//     if (!irq)
+//         return;
+    
+//     irq->parentDev = opaque;
+// }
 
 void qemu_set_irq(qemu_irq irq, int level)
 {
     if (!irq)
         return;
+
+    const char* callDev = NULL;
+    const char* parentDev = NULL;
+
+    if (irq->callDev) {
+        callDev = object_class_get_name(object_get_class(OBJECT(irq->callDev)));
+        printf("Irq device set = %s...\n", callDev);
+    }
+    else 
+        printf("Not callDev....\n");
+
+    if (irq->parentDev) {
+        parentDev = object_class_get_name(object_get_class(OBJECT(irq->parentDev)));
+        printf("IRQ parent  = %s....\n", parentDev);
+    }
+    else
+        printf("Not parentDev....\n\n");
+
+    uint8_t buf[256];
+    snprintf(buf, sizeof(buf), "%s;%s;%i", parentDev, callDev, level);
+
+    if (irq->parentDev)
+        try_send_irq((uint8_t*)buf);
 
     irq->handler(irq->opaque, irq->n, level);
 }
@@ -74,6 +154,9 @@ qemu_irq qemu_allocate_irq(qemu_irq_handler handler, void *opaque, int n)
     irq->handler = handler;
     irq->opaque = opaque;
     irq->n = n;
+
+    irq->callDev = NULL;
+    irq->parentDev = NULL;
 
     return irq;
 }

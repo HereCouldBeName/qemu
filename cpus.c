@@ -1059,28 +1059,27 @@ static int do_vm_stop(RunState state, bool send_stop)
         }
     }
 
-    // if(runstate_is_running() && state == RUN_STATE_IRQ) {
-    //      cpu_disable_ticks();
-    //     pause_all_vcpus();
-    //     vm_state_notify(0, state);
-    //     if (send_stop) {
-    //         qapi_event_send_stop(&error_abort);
-    //     }
-    // }
+    bdrv_drain_all();
+    replay_disable_events();
+    ret = bdrv_flush_all();
 
-    // //Check: Is target remote? 
-    // //Problem: I don't know if target debuging now
-    // if (runstate_is_debugging() && state == RUN_STATE_IRQ) {
-    //     printf("I'm here\n");
-    //     //TODO: send something to Cutter =)
-    //     cpu_disable_ticks();
-    //     pause_all_vcpus();
-    //     vm_state_notify(0, state);
-    //     if (send_stop) {
-    //         qapi_event_send_stop(&error_abort);
-    //     }
-    // }
+    return ret;
+}
 
+static int do_vm_stop_irq(const uint8_t *buf) {
+    
+    int ret = 0;
+    
+    if (runstate_is_running()) {
+        printf("runstate ok....\n");
+        cpu_disable_ticks();
+        printf("cput disable ok....\n");
+        pause_all_vcpus();
+        printf("pause all ok....\n");
+        runstate_set(RUN_STATE_IRQ);
+        gdb_send_irq(buf);
+        qapi_event_send_stop(&error_abort);
+    }
 
     bdrv_drain_all();
     replay_disable_events();
@@ -2113,35 +2112,12 @@ int vm_stop(RunState state)
     return do_vm_stop(state, true);
 }
 
-static int do_vm_stop_irq(const uint8_t *buf) {
-    int ret = 0;
-    if (runstate_is_running()) {
-        printf("runstate ok....\n");
-        cpu_disable_ticks();
-        printf("cput disable ok....\n");
-        pause_all_vcpus();
-        printf("pause all ok....\n");
-        runstate_set(RUN_STATE_IRQ);
-        gdb_send_irq(buf);
-        qapi_event_send_stop(&error_abort);
-    }
-
-    bdrv_drain_all();
-    replay_disable_events();
-    ret = bdrv_flush_all();
-
-    return ret;
-}
-
 int vm_stop_irq(const uint8_t *buf) {
 
     //cpu_handle_guest_debug()
 
     if (qemu_in_vcpu_thread()) {
         qemu_system_vmstop_request_prepare();
-        /*
-         * Problems: Need to send buf to qemu_system_vmstop_request.
-        */
         qemu_system_vmstop_irq(buf);
         //qemu_system_vmstop_request(RUN_STATE_IRQ);
         /*

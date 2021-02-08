@@ -2210,6 +2210,21 @@ bool gdbserver_is_running(void)
     }
 }
 
+static void send_irq_bh(void *opaque)
+{
+    const uint8_t *buf = opaque;
+    vm_stop_irq(buf);
+}
+
+bool try_send_irq(uint8_t* buf)
+{
+    if (gdbserver_is_running()) {
+        aio_bh_schedule_oneshot(qemu_get_aio_context(), send_irq_bh, buf);
+        return true;
+    }
+    return false;
+}
+
 static void register_types(void)
 {
     type_register_static(&char_gdb_type_info);

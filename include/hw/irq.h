@@ -11,6 +11,16 @@ typedef void (*qemu_irq_handler)(void *opaque, int n, int level);
 
 void qemu_set_irq(qemu_irq irq, int level);
 
+void qemu_set_irq_call_dev(qemu_irq irq, void *opaque);
+const char* qemu_get_irq_call_dev(qemu_irq irq);    //???
+
+
+void qemu_set_irq_parent_dev(qemu_irq* irq, void *opaque, int n);
+//void qemu_set_irq_parent_dev(qemu_irq irq, void *opaque, int n);
+const char* qemu_get_irq_parent_dev(qemu_irq irq);  //???
+
+//void qemu_set_irq_dev(qemu_irq irq, int level, void *opaque);
+
 static inline void qemu_irq_raise(qemu_irq irq)
 {
     qemu_set_irq(irq, 1);

@@ -122,6 +122,7 @@ void gdbserver_cleanup(void);
 
 bool gdbserver_is_running(void);
 
+bool try_send_irq(uint8_t* buf);
 /**
  * gdb_has_xml:
  * This is an ugly hack to cope with both new and old gdb.
