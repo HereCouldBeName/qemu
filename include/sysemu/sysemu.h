@@ -61,7 +61,7 @@ void vm_start(void);
 int vm_prepare_start(void);
 int vm_stop(RunState state);
 
-int vm_stop_irq(const uint8_t *buf);
+int vm_stop_irq(const char *buf) ;
 
 int vm_stop_force_state(RunState state);
 int vm_shutdown(void);
@@ -87,10 +87,10 @@ void qemu_register_powerdown_notifier(Notifier *notifier);
 void qemu_system_debug_request(void);
 void qemu_system_vmstop_request(RunState reason);
 
-void qemu_system_vmstop_irq(const uint8_t *buf);
+void qemu_system_vmstop_irq(const char *buf);
 
 void qemu_system_vmstop_request_prepare(void);
-bool qemu_vmstop_requested(RunState *r, const uint8_t **buf);
+bool qemu_vmstop_requested(RunState *r, const char **buf);
 
 //bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf);
 

@@ -1066,17 +1066,14 @@ static int do_vm_stop(RunState state, bool send_stop)
     return ret;
 }
 
-static int do_vm_stop_irq(const uint8_t *buf) {
-    
+static int do_vm_stop_irq(const char *buf) {
     int ret = 0;
     
     if (runstate_is_running()) {
-        printf("runstate ok....\n");
         cpu_disable_ticks();
-        printf("cput disable ok....\n");
         pause_all_vcpus();
-        printf("pause all ok....\n");
         runstate_set(RUN_STATE_IRQ);
+        //printf("BUFFER befor sending : %s...\n", buf);
         gdb_send_irq(buf);
         qapi_event_send_stop(&error_abort);
     }
@@ -2112,18 +2109,13 @@ int vm_stop(RunState state)
     return do_vm_stop(state, true);
 }
 
-int vm_stop_irq(const uint8_t *buf) {
+int vm_stop_irq(const char *buf) {
 
     //cpu_handle_guest_debug()
 
     if (qemu_in_vcpu_thread()) {
         qemu_system_vmstop_request_prepare();
         qemu_system_vmstop_irq(buf);
-        //qemu_system_vmstop_request(RUN_STATE_IRQ);
-        /*
-         * FIXME: should not return to device code in case
-         * vm_stop() has been requested.
-         */
         cpu_stop_current();
         printf("IRQ THREAD....\n");
         return 0;

@@ -584,7 +584,7 @@ static RunState current_run_state = RUN_STATE_PRECONFIG;
 /* We use RUN_STATE__MAX but any invalid value will do */
 static RunState vmstop_requested = RUN_STATE__MAX;
 
-static const uint8_t *vmstop_irq_buff = NULL;
+static const char *vmstop_irq_buff = NULL;
 
 static QemuMutex vmstop_lock;
 
@@ -779,35 +779,8 @@ StatusInfo *qmp_query_status(Error **errp)
     return info;
 }
 
-// bool qemu_vmstop_irqed(RunState *r, const uint8_t **buf)
-// {
-//     printf("faile\n");
-//     qemu_mutex_lock(&vmstop_lock);
-//     *r = vmstop_requested;
-//     vmstop_requested = RUN_STATE__MAX;
-
-//     //printf("RunState r = %d\n", *r);
-
-//     if (*r == RUN_STATE_IRQ) {
-//         *buf = vmstop_irq_buff;
-//         vmstop_irq_buff = NULL;
-//     }
-
-//     qemu_mutex_unlock(&vmstop_lock);
-//     //printf("buf = %s and vmstop_irq_buff = %s\n", *buf, vmstop_irq_buff);
-//     return *buf != NULL;
-// }
-
-bool qemu_vmstop_requested(RunState *r, const uint8_t **buf)
+bool qemu_vmstop_requested(RunState *r, const char **buf)
 {
-
-    if(vmstop_requested == 4) {
-        printf("VMSTOP OK\n");
-    }
-
-    if (*r == 4) {
-        printf(" R OK and vmstop_requested = %i\n", vmstop_requested);
-    }
     qemu_mutex_lock(&vmstop_lock);
     *r = vmstop_requested;
     vmstop_requested = RUN_STATE__MAX;
@@ -829,13 +802,13 @@ void qemu_system_vmstop_request_prepare(void)
 
 void qemu_system_vmstop_request(RunState state)
 {
+    printf("!!!!!!qemu_system_vmstop_request!!!!!!!!!\n");
     vmstop_requested = state;
-    printf("vmstop = %d\n", vmstop_requested);
     qemu_mutex_unlock(&vmstop_lock);
     qemu_notify_event();
 }
 
-void qemu_system_vmstop_irq(const uint8_t *buf)
+void qemu_system_vmstop_irq(const char *buf)
 {
     vmstop_irq_buff = buf;
     qemu_system_vmstop_request(RUN_STATE_IRQ);
@@ -1864,7 +1837,7 @@ void qemu_system_debug_request(void)
 static bool main_loop_should_exit(void)
 {
     RunState r;
-    const uint8_t *buf = NULL;
+    const char *buf = NULL;
     ShutdownCause request;
 
     if (preconfig_exit_requested) {

@@ -2,7 +2,7 @@
 #include "qemu-common.h"
 #include "exec/gdbstub.h"  
 
-bool try_send_irq(uint8_t* buf)
+bool try_send_irq(char *buf)
 {
     return true;
 }

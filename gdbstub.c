@@ -1432,53 +1432,33 @@ static void gdb_irq_output(GDBState *s, const char *msg, int len)
 {
     char buf[MAX_PACKET_LENGTH];
 
-    //CPUState *cpu = s->c_cpu;
-    //char new_msg[256];
-
-    /*
-     * Отправка двух сообщений - первое - только Irq
-     * Второе - T17thread:%02x
-     * Видимо придется реализовыавать в Cutter цикл ожидания OK
-    */
-
-
-    //snprintf(new_msg, sizeof(new_msg), "%s$T17thread:%02x;", msg, cpu_gdb_index(cpu));
-
-    //printf("MSG is = %s\n", new_msg);
-
     buf[0] = 'I';
     if (len > (MAX_PACKET_LENGTH/2) - 1)
         len = (MAX_PACKET_LENGTH/2) - 1;
     
-    //memtohex(buf + 1, (uint8_t *)new_msg, strlen(new_msg));
     memtohex(buf + 1, (uint8_t *)msg, len);
     put_packet(s, buf);
 }
 
 
-void gdb_send_irq(const uint8_t *buf)
+void gdb_send_irq(const char *buf)
 {
     GDBState *s = gdbserver_state;
     CPUState *cpu = s->c_cpu;
     
-    /*TODO
-    * Add some letter for Irq
-    * perhaps, use memtohex
-    */
-    //put_packet(s, (const char *)buf);
-
-
     int max_sz;
-    const char *p = (const char *)buf;
+    const char *p = buf;
     int len = strlen(p);
 
     max_sz = (sizeof(s->last_packet) - 2) / 2;
     for (;;) {
         if (len <= max_sz) {
             gdb_irq_output(s, p, len);
+                        printf("BUFFER sending : %s...\n", p);
             break;
         }
         gdb_irq_output(s, p, max_sz);
+                    printf("BUFFER sending : %s...\n", p);
         p += max_sz;
         len -= max_sz;
     }
@@ -1486,8 +1466,9 @@ void gdb_send_irq(const uint8_t *buf)
     char buff[256];
     gdb_set_stop_cpu(cpu);
     snprintf(buff, sizeof(buff), "T%02xthread:%02x;", GDB_SIGNAL_INT, cpu_gdb_index(cpu));
-    printf("%s\n", buff);
     put_packet(s, buff);
+
+        printf("\n---!Sending to Cutter finished!---\n");
 
     /* disable single step if it was enabled */
     cpu_single_step(cpu, 0);
@@ -2203,23 +2184,25 @@ void gdbserver_cleanup(void)
 
 bool gdbserver_is_running(void)
 {
-    if (gdbserver_state) {
-        return true;
-    } else {
+    if (!runstate_check(RUN_STATE_RUNNING)) {
         return false;
     }
+    return gdbserver_state ? true : false;
 }
 
 static void send_irq_bh(void *opaque)
 {
-    const uint8_t *buf = opaque;
+    const char *buf = opaque;
     vm_stop_irq(buf);
 }
 
-bool try_send_irq(uint8_t* buf)
+bool try_send_irq(char *buf)
 {
     if (gdbserver_is_running()) {
+        printf("*********RUN SERVER*******\n");
+        //printf("try_send_irq  buffer: %s...\n", buf);
         aio_bh_schedule_oneshot(qemu_get_aio_context(), send_irq_bh, buf);
+        //vm_stop_irq(irq);
         return true;
     }
     return false;

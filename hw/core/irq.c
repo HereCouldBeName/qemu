@@ -28,7 +28,6 @@
 #include "qom/object.h"
 
 #include "exec/gdbstub.h"
-//#include "sysemu/sysemu.h"
 
 #define IRQ(obj) OBJECT_CHECK(struct IRQState, (obj), TYPE_IRQ)
 
@@ -41,7 +40,6 @@ struct IRQState {
 
     void *callDev;
     void *parentDev;
-
 };
 
 
@@ -116,11 +114,12 @@ void qemu_set_irq(qemu_irq irq, int level)
     else
         printf("Not parentDev....\n\n");
 
-    uint8_t buf[256];
-    snprintf(buf, sizeof(buf), "%s;%s;%i", parentDev, callDev, level);
-
-    if (irq->parentDev)
-        try_send_irq((uint8_t*)buf);
+    if (irq->parentDev) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "%s;%s;%i", parentDev, callDev, level);
+        printf("IRQ buf = %s...\n ", buf);
+        try_send_irq(buf);
+    }
 
     irq->handler(irq->opaque, irq->n, level);
 }
