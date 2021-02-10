@@ -2194,6 +2194,7 @@ static void send_irq_bh(void *opaque)
 {
     const char *buf = opaque;
     vm_stop_irq(buf);
+    free(opaque);
 }
 
 bool try_send_irq(char *buf)
