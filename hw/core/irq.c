@@ -102,24 +102,27 @@ void qemu_set_irq(qemu_irq irq, int level)
 
     if (irq->callDev) {
         callDev = object_class_get_name(object_get_class(OBJECT(irq->callDev)));
-        printf("Irq device set = %s...\n", callDev);
+        //printf("Irq device set = %s...\n", callDev);
     }
-    else 
-        printf("Not callDev....\n");
+    //else 
+        //printf("Not callDev....\n");
 
     if (irq->parentDev) {
         parentDev = object_class_get_name(object_get_class(OBJECT(irq->parentDev)));
-        printf("IRQ parent  = %s....\n", parentDev);
+        //printf("IRQ parent  = %s....\n", parentDev);
     }
-    else
-        printf("Not parentDev....\n\n");
+    //else
+        //printf("Not parentDev....\n\n");
 
     if (irq->parentDev) {
-        char *buf = malloc(256 * sizeof(char));
-        snprintf(buf, 256 * sizeof(char), "%s;%s;%i", parentDev, callDev, level);
-        if (!try_send_irq(buf)) {
-            free(buf);
-        }
+        //char *buf = malloc(256 * sizeof(char));
+        char buf[256];
+        snprintf(buf, 256 * sizeof(char), "%s;%s;%i\n", parentDev, callDev, level);
+        
+        // if (!try_send_irq(buf)) {
+        //     free(buf);
+        // }
+        try_send_irq(buf);
     }
 
     irq->handler(irq->opaque, irq->n, level);

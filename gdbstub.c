@@ -46,6 +46,12 @@
 #define GDB_ATTACHED "1"
 #endif
 
+
+#include "hw/core/tracking_irq.h"
+
+TrackIrq ti;
+
+
 static inline int target_memory_rw_debug(CPUState *cpu, target_ulong addr,
                                          uint8_t *buf, int len, bool is_write)
 {
@@ -1447,7 +1453,8 @@ void gdb_send_irq(const char *buf)
     CPUState *cpu = s->c_cpu;
     
     int max_sz;
-    const char *p = buf;
+    //const char *p = buf;
+    const char *p = qstring_get_str(ti.outbuf);
     int len = strlen(p);
 
     max_sz = (sizeof(s->last_packet) - 2) / 2;
@@ -1462,6 +1469,7 @@ void gdb_send_irq(const char *buf)
         p += max_sz;
         len -= max_sz;
     }
+    finish_irq_tracking(&ti);
 
     char buff[256];
     gdb_set_stop_cpu(cpu);
@@ -2192,18 +2200,23 @@ bool gdbserver_is_running(void)
 
 static void send_irq_bh(void *opaque)
 {
-    const char *buf = opaque;
+    const char *buf = qstring_get_str(ti.outbuf);
     vm_stop_irq(buf);
-    free(opaque);
+    // const char *buf = opaque;
+    // vm_stop_irq(buf);
+    // free(opaque);
+    // printf("---------- !SENDIN! --------\n");
 }
 
 bool try_send_irq(char *buf)
 {
     if (gdbserver_is_running()) {
-        printf("*********RUN SERVER*******\n");
-        //printf("try_send_irq  buffer: %s...\n", buf);
-        aio_bh_schedule_oneshot(qemu_get_aio_context(), send_irq_bh, buf);
-        //vm_stop_irq(irq);
+        if (!ti.isCalling) {
+            call_irq_tracking(&ti, (const char *)buf);
+            aio_bh_schedule_oneshot(qemu_get_aio_context(), send_irq_bh, NULL);
+        } else {
+            qstring_append(ti.outbuf, (const char*)buf);
+        }
         return true;
     }
     return false;

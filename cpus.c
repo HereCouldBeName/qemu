@@ -1068,7 +1068,7 @@ static int do_vm_stop(RunState state, bool send_stop)
 
 static int do_vm_stop_irq(const char *buf) {
     int ret = 0;
-    
+
     if (runstate_is_running()) {
         cpu_disable_ticks();
         pause_all_vcpus();
@@ -2113,13 +2113,13 @@ int vm_stop_irq(const char *buf) {
 
     //cpu_handle_guest_debug()
 
-    if (qemu_in_vcpu_thread()) {
-        qemu_system_vmstop_request_prepare();
-        qemu_system_vmstop_irq(buf);
-        cpu_stop_current();
-        printf("IRQ THREAD....\n");
-        return 0;
-    }
+    // if (qemu_in_vcpu_thread()) {
+    //     qemu_system_vmstop_request_prepare();
+    //     qemu_system_vmstop_irq(buf);
+    //     cpu_stop_current();
+    //     printf("IRQ THREAD....\n");
+    //     return 0;
+    // }
 
     return do_vm_stop_irq(buf);
 }
